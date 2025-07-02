@@ -298,7 +298,7 @@ describe('Replicate Service', () => {
       
       expect(Array.isArray(result.output)).toBe(true)
       expect(result.output).toHaveLength(2)
-      result.output?.forEach(url => {
+      (result.output as string[])?.forEach((url: string) => {
         expect(typeof url).toBe('string')
         expect(url).toMatch(/^https?:\/\//)
       })

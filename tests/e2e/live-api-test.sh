@@ -2,8 +2,15 @@
 
 # Live API integration test for aidobe
 # Requires running dev server: npm run dev
+# Set PASSWORD environment variable: export PASSWORD="your-password"
 API_URL="http://localhost:8787"
-PASSWORD="aim@gicD)@#I2ij"
+PASSWORD="${PASSWORD:-}"
+
+if [ -z "$PASSWORD" ]; then
+  echo "Error: PASSWORD environment variable not set"
+  echo "Usage: export PASSWORD='your-password' && ./live-api-test.sh"
+  exit 1
+fi
 
 echo "Live API Integration Test"
 echo "========================="

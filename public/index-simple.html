@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>aidobe - TikTok AI Image Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .aspect-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .model-controls {
+            display: none;
+        }
+        .model-controls.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">aidobe</h1>
+            <p class="text-gray-600">TikTok-Optimized AI Image Generation</p>
+        </div>
+
+        <!-- Main Generation Interface -->
+        <div class="bg-white rounded-lg card-shadow p-6 mb-8">
+            <form id="generateForm" class="space-y-6">
+                <!-- Prompt Input -->
+                <div>
+                    <label for="prompt" class="block text-sm font-medium text-gray-700 mb-2">
+                        Prompt <span class="text-red-500">*</span>
+                    </label>
+                    <textarea 
+                        id="prompt" 
+                        name="prompt" 
+                        rows="3" 
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="A trendy coffee shop with plants, vertical format for TikTok"
+                        required
+                    ></textarea>
+                    <div class="text-xs text-gray-500 mt-1">
+                        <span id="charCount">0</span>/4000 characters
+                    </div>
+                </div>
+
+                <!-- Model Selection -->
+                <div>
+                    <label for="model" class="block text-sm font-medium text-gray-700 mb-2">AI Model</label>
+                    <select id="model" name="model" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="openai:gpt-image-1">🚀 GPT-Image-1 (Latest, fastest)</option>
+                        <option value="replicate:fofr/flux-pro">⭐ Flux Pro (Best quality)</option>
+                        <option value="replicate:black-forest-labs/flux-dev">🔥 Flux Dev (Balanced)</option>
+                        <option value="replicate:black-forest-labs/flux-schnell">⚡ Flux Schnell (Ultra fast)</option>
+                        <option value="replicate:stability-ai/sdxl">🎯 SDXL (Stable Diffusion)</option>
+                        <option value="replicate:recraft-ai/recraft-v3">🎨 Recraft v3 (Stylized)</option>
+                    </select>
+                </div>
+
+                <!-- TikTok Formats -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Format</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button type="button" class="aspect-btn px-4 py-3 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors active" data-ratio="9:16">
+                            📱 TikTok<br><span class="text-xs text-gray-500">9:16 Vertical</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-4 py-3 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors" data-ratio="1:1">
+                            📸 Instagram<br><span class="text-xs text-gray-500">1:1 Square</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-4 py-3 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors" data-ratio="16:9">
+                            🖥️ YouTube<br><span class="text-xs text-gray-500">16:9 Wide</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-4 py-3 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors" data-ratio="4:5">
+                            📑 Story<br><span class="text-xs text-gray-500">4:5 Tall</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Model-Specific Controls -->
+                
+                <!-- Flux Models Controls -->
+                <div id="flux-controls" class="model-controls">
+                    <div class="bg-blue-50 p-4 rounded-lg space-y-3">
+                        <h4 class="font-medium text-gray-800">Flux Settings</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="steps" class="block text-sm text-gray-700 mb-1">Steps</label>
+                                <select id="steps" name="steps" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    <option value="4">4 (Ultra Fast)</option>
+                                    <option value="10">10 (Fast)</option>
+                                    <option value="25" selected>25 (Balanced)</option>
+                                    <option value="50">50 (High Quality)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="guidance" class="block text-sm text-gray-700 mb-1">Guidance</label>
+                                <input type="range" id="guidance" name="guidance" min="1" max="10" step="0.5" value="3.5" class="w-full">
+                                <div class="text-xs text-gray-500 text-center"><span id="guidanceValue">3.5</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SDXL Controls -->
+                <div id="sdxl-controls" class="model-controls">
+                    <div class="bg-green-50 p-4 rounded-lg space-y-3">
+                        <h4 class="font-medium text-gray-800">SDXL Settings</h4>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="cfg_scale" class="block text-sm text-gray-700 mb-1">CFG Scale</label>
+                                <input type="range" id="cfg_scale" name="cfg_scale" min="1" max="20" step="0.5" value="7.5" class="w-full">
+                                <div class="text-xs text-gray-500 text-center"><span id="cfgValue">7.5</span></div>
+                            </div>
+                            <div>
+                                <label for="inference_steps" class="block text-sm text-gray-700 mb-1">Steps</label>
+                                <select id="inference_steps" name="inference_steps" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    <option value="20">20 (Fast)</option>
+                                    <option value="25" selected>25 (Balanced)</option>
+                                    <option value="30">30 (Quality)</option>
+                                    <option value="50">50 (Max Quality)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recraft Controls -->
+                <div id="recraft-controls" class="model-controls">
+                    <div class="bg-purple-50 p-4 rounded-lg space-y-3">
+                        <h4 class="font-medium text-gray-800">Recraft Style</h4>
+                        <select id="recraft_style" name="recraft_style" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            <option value="any">Any Style</option>
+                            <option value="realistic_image">📸 Photorealistic</option>
+                            <option value="digital_illustration">🎨 Digital Art</option>
+                            <option value="digital_illustration/2d_art_poster">🎭 Anime/Poster</option>
+                            <option value="digital_illustration/pixel_art">🕹️ Pixel Art</option>
+                            <option value="realistic_image/b_and_w">⚫ Black & White</option>
+                            <option value="realistic_image/hdr">✨ HDR</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <button 
+                    type="submit" 
+                    id="generateBtn" 
+                    class="w-full gradient-bg text-white font-medium py-3 px-6 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Generate Image ✨
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden bg-white rounded-lg card-shadow p-6 mb-8">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Generating your image...</h3>
+                <p class="text-gray-600">This usually takes 10-30 seconds</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden bg-white rounded-lg card-shadow p-6 mb-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Generated Image</h3>
+            <div id="resultContent"></div>
+        </div>
+
+        <!-- Recent Generations -->
+        <div class="bg-white rounded-lg card-shadow p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Recent Generations</h3>
+                <button id="clearHistory" class="text-sm text-red-600 hover:text-red-800">Clear All</button>
+            </div>
+            <div id="recentGenerations" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p class="text-gray-500 col-span-full text-center">Generate your first image to see results here!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+        const PASSWORD = localStorage.getItem('aidobe_password') || prompt('Enter API password:');
+        if (PASSWORD) localStorage.setItem('aidobe_password', PASSWORD);
+
+        // DOM Elements
+        const form = document.getElementById('generateForm');
+        const promptInput = document.getElementById('prompt');
+        const charCount = document.getElementById('charCount');
+        const loadingState = document.getElementById('loadingState');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultContent = document.getElementById('resultContent');
+        const generateBtn = document.getElementById('generateBtn');
+        const modelSelect = document.getElementById('model');
+
+        // State
+        let currentAspectRatio = '9:16'; // Default to TikTok
+        let currentModel = 'openai:gpt-image-1';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentGenerations();
+            
+            // Character count
+            promptInput.addEventListener('input', function() {
+                charCount.textContent = this.value.length;
+            });
+
+            // Model change handler
+            modelSelect.addEventListener('change', function() {
+                currentModel = this.value;
+                updateModelControls();
+            });
+
+            // Guidance slider
+            document.getElementById('guidance').addEventListener('input', function() {
+                document.getElementById('guidanceValue').textContent = this.value;
+            });
+
+            // CFG Scale slider
+            document.getElementById('cfg_scale').addEventListener('input', function() {
+                document.getElementById('cfgValue').textContent = this.value;
+            });
+
+            // Aspect ratio buttons
+            document.querySelectorAll('.aspect-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentAspectRatio = this.dataset.ratio;
+                    
+                    // Visual feedback
+                    document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Clear history
+            document.getElementById('clearHistory').addEventListener('click', function() {
+                if (confirm('Clear all generation history?')) {
+                    localStorage.removeItem('aidobe_history');
+                    loadRecentGenerations();
+                }
+            });
+
+            // Form submission
+            form.addEventListener('submit', handleGenerate);
+            
+            // Initial model controls update
+            updateModelControls();
+        });
+
+        function updateModelControls() {
+            // Hide all model controls
+            document.querySelectorAll('.model-controls').forEach(control => {
+                control.classList.remove('active');
+            });
+
+            // Show relevant controls based on model
+            const [provider, model] = currentModel.split(':');
+            
+            if (provider === 'replicate') {
+                if (model.includes('flux')) {
+                    document.getElementById('flux-controls').classList.add('active');
+                    
+                    // Adjust steps for flux-schnell
+                    if (model === 'black-forest-labs/flux-schnell') {
+                        document.getElementById('steps').value = '4';
+                    }
+                } else if (model === 'stability-ai/sdxl') {
+                    document.getElementById('sdxl-controls').classList.add('active');
+                } else if (model === 'recraft-ai/recraft-v3') {
+                    document.getElementById('recraft-controls').classList.add('active');
+                }
+            }
+        }
+
+        async function handleGenerate(e) {
+            e.preventDefault();
+            
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                alert('Please enter a prompt');
+                return;
+            }
+
+            // Show loading state
+            loadingState.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            generateBtn.disabled = true;
+
+            try {
+                const formData = new FormData(form);
+                const [provider, model] = currentModel.split(':');
+                
+                const requestData = {
+                    prompt: prompt,
+                    provider: provider,
+                    model: model,
+                    aspect_ratio: currentAspectRatio,
+                    enhance: true // Always enhance prompts
+                };
+
+                // Add model-specific parameters
+                if (provider === 'replicate') {
+                    if (model.includes('flux')) {
+                        requestData.steps = parseInt(formData.get('steps')) || 25;
+                        requestData.guidance = parseFloat(formData.get('guidance')) || 3.5;
+                        requestData.aspect_ratio = currentAspectRatio;
+                        requestData.output_format = 'jpg';
+                    } else if (model === 'stability-ai/sdxl') {
+                        // SDXL uses width/height instead of aspect_ratio
+                        const dimensions = getDimensionsForAspectRatio(currentAspectRatio);
+                        requestData.width = dimensions.width;
+                        requestData.height = dimensions.height;
+                        requestData.guidance_scale = parseFloat(formData.get('cfg_scale')) || 7.5;
+                        requestData.num_inference_steps = parseInt(formData.get('inference_steps')) || 25;
+                        delete requestData.aspect_ratio; // SDXL doesn't use aspect_ratio
+                    } else if (model === 'recraft-ai/recraft-v3') {
+                        requestData.style = formData.get('recraft_style') || 'any';
+                        // Recraft uses size parameter
+                        requestData.size = getSizeForAspectRatio(currentAspectRatio);
+                        delete requestData.aspect_ratio; // Recraft uses size instead
+                    }
+                }
+
+                const response = await fetch(`${API_BASE}/api/images/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${PASSWORD}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || result.message || 'Generation failed');
+                }
+
+                // Show results
+                displayResult(result);
+                saveToHistory(result);
+                loadRecentGenerations(); // Refresh recent generations
+
+            } catch (error) {
+                console.error('Generation error:', error);
+                alert(`Generation failed: ${error.message}`);
+            } finally {
+                loadingState.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+
+        function getDimensionsForAspectRatio(ratio) {
+            const dimensions = {
+                '9:16': { width: 768, height: 1344 },
+                '1:1': { width: 1024, height: 1024 },
+                '16:9': { width: 1344, height: 768 },
+                '4:5': { width: 896, height: 1120 }
+            };
+            return dimensions[ratio] || dimensions['9:16'];
+        }
+
+        function getSizeForAspectRatio(ratio) {
+            const sizes = {
+                '9:16': '1024x1365',
+                '1:1': '1024x1024',
+                '16:9': '1365x1024',
+                '4:5': '1024x1280'
+            };
+            return sizes[ratio] || sizes['9:16'];
+        }
+
+        function displayResult(result) {
+            resultContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4">
+                        ${result.outputs.map(output => `
+                            <div class="relative">
+                                <img src="${output.url}" alt="Generated image" class="w-full rounded-lg shadow-md">
+                                <div class="absolute top-2 right-2">
+                                    <button onclick="downloadImage('${output.url}', '${output.id}')" class="bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm hover:bg-opacity-70">
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="text-sm text-gray-600 space-y-1">
+                        <p><strong>Prompt:</strong> ${result.originalPrompt}</p>
+                        ${result.enhancedPrompt ? `<p><strong>Enhanced:</strong> ${result.enhancedPrompt}</p>` : ''}
+                        <p><strong>Model:</strong> ${result.model}</p>
+                        <p><strong>ID:</strong> ${result.promptId}</p>
+                    </div>
+                </div>
+            `;
+            resultsSection.classList.remove('hidden');
+        }
+
+        function saveToHistory(result) {
+            const history = JSON.parse(localStorage.getItem('aidobe_history') || '[]');
+            const entry = {
+                id: result.promptId,
+                prompt: result.originalPrompt,
+                model: result.model,
+                outputs: result.outputs,
+                timestamp: Date.now()
+            };
+            history.unshift(entry);
+            // Keep only last 20 entries
+            localStorage.setItem('aidobe_history', JSON.stringify(history.slice(0, 20)));
+        }
+
+        async function loadRecentGenerations() {
+            try {
+                // Try to load from API first, fallback to localStorage
+                const response = await fetch(`${API_BASE}/api/images/history?limit=6`, {
+                    headers: {
+                        'Authorization': `Bearer ${PASSWORD}`
+                    }
+                });
+                
+                let data;
+                if (response.ok) {
+                    data = await response.json();
+                } else {
+                    // Fallback to localStorage
+                    const history = JSON.parse(localStorage.getItem('aidobe_history') || '[]');
+                    data = { prompts: history.slice(0, 6) };
+                }
+                
+                const container = document.getElementById('recentGenerations');
+                
+                if (data.prompts && data.prompts.length > 0) {
+                    container.innerHTML = data.prompts.map(prompt => `
+                        <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                            ${prompt.outputs && prompt.outputs.length > 0 ? `
+                                <img src="${prompt.outputs[0].url || prompt.outputs[0]}" alt="Generated image" class="w-full h-48 object-cover">
+                            ` : prompt.output_urls && prompt.output_urls.length > 0 ? `
+                                <img src="${prompt.output_urls[0]}" alt="Generated image" class="w-full h-48 object-cover">
+                            ` : `
+                                <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                    <span class="text-gray-500">No image</span>
+                                </div>
+                            `}
+                            <div class="p-3">
+                                <p class="text-sm text-gray-900 truncate" title="${prompt.prompt || prompt.original_prompt}">${prompt.prompt || prompt.original_prompt}</p>
+                                <p class="text-xs text-gray-500 mt-1">${prompt.timestamp ? new Date(prompt.timestamp).toLocaleDateString() : new Date(prompt.created_at).toLocaleDateString()}</p>
+                                <p class="text-xs text-gray-400">${prompt.model}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-gray-500 col-span-full text-center">Generate your first image to see results here!</p>';
+                }
+                
+            } catch (error) {
+                console.error('Failed to load recent generations:', error);
+                // Try localStorage as backup
+                const history = JSON.parse(localStorage.getItem('aidobe_history') || '[]');
+                const container = document.getElementById('recentGenerations');
+                if (history.length > 0) {
+                    container.innerHTML = history.slice(0, 6).map(item => `
+                        <div class="border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="p-3">
+                                <p class="text-sm text-gray-900 truncate">${item.prompt}</p>
+                                <p class="text-xs text-gray-500">${new Date(item.timestamp).toLocaleDateString()}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+
+        function downloadImage(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aidobe-${filename}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>

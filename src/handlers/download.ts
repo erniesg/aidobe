@@ -158,7 +158,7 @@ downloadRoutes.get('/stats', async (c) => {
       totalVideos: stats?.total_videos || 0,
       totalStorageBytes: stats?.total_storage_bytes || 0,
       averageFileSize: stats?.avg_file_size || 0,
-      totalStorageMB: Math.round((stats?.total_storage_bytes || 0) / (1024 * 1024))
+      totalStorageMB: Math.round((Number(stats?.total_storage_bytes) || 0) / (1024 * 1024))
     })
     
   } catch (error) {

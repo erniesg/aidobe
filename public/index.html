@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>aidobe - AI Image Generation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .aspect-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">aidobe</h1>
+            <p class="text-gray-600">AI-Powered Image Generation with Flux 1.1 Pro Ultra</p>
+        </div>
+
+        <!-- Main Generation Interface -->
+        <div class="bg-white rounded-lg card-shadow p-6 mb-8">
+            <form id="generateForm" class="space-y-6">
+                <!-- Prompt Input -->
+                <div>
+                    <label for="prompt" class="block text-sm font-medium text-gray-700 mb-2">
+                        Prompt <span class="text-red-500">*</span>
+                    </label>
+                    <textarea 
+                        id="prompt" 
+                        name="prompt" 
+                        rows="3" 
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="A majestic snow-capped mountain peak bathed in a warm glow of the setting sun"
+                        required
+                    ></textarea>
+                    <div class="text-xs text-gray-500 mt-1">
+                        <span id="charCount">0</span>/4000 characters
+                    </div>
+                </div>
+
+                <!-- Model Selection -->
+                <div>
+                    <label for="model" class="block text-sm font-medium text-gray-700 mb-2">AI Model</label>
+                    <select id="model" name="model" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        <option value="openai:gpt-image-1">OpenAI GPT-Image-1 (Latest & fastest)</option>
+                        <option value="replicate:black-forest-labs/flux-1.1-pro-ultra">Flux 1.1 Pro Ultra (Best quality)</option>
+                        <option value="replicate:bytedance/seedream-3">SeeaDream-3 (Fast photorealistic)</option>
+                        <option value="replicate:google/imagen-4">Imagen-4 (Google's model)</option>
+                        <option value="replicate:recraft-ai/recraft-v3">Recraft v3 (Stylized art)</option>
+                        <option value="openai:dall-e-3">DALL-E 3 (OpenAI classic)</option>
+                    </select>
+                    <div class="text-xs text-gray-500 mt-1">
+                        Different models have different strengths and generation times
+                    </div>
+                </div>
+
+                <!-- Quick Presets -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Quick Presets</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button type="button" class="preset-btn px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors" data-preset="portrait">
+                            📱 TikTok/Reels
+                        </button>
+                        <button type="button" class="preset-btn px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors" data-preset="square">
+                            📸 Instagram
+                        </button>
+                        <button type="button" class="preset-btn px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors" data-preset="story">
+                            📑 Story
+                        </button>
+                        <button type="button" class="preset-btn px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors" data-preset="cinematic">
+                            🎬 Cinematic
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Aspect Ratio Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Aspect Ratio</label>
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        <button type="button" class="aspect-btn px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors" data-ratio="9:16">
+                            9:16<br><span class="text-xs text-gray-500">Vertical</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors" data-ratio="1:1">
+                            1:1<br><span class="text-xs text-gray-500">Square</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors" data-ratio="16:9">
+                            16:9<br><span class="text-xs text-gray-500">Wide</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors" data-ratio="3:2">
+                            3:2<br><span class="text-xs text-gray-500">Photo</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors" data-ratio="4:3">
+                            4:3<br><span class="text-xs text-gray-500">Classic</span>
+                        </button>
+                        <button type="button" class="aspect-btn px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50 transition-colors" data-ratio="21:9">
+                            21:9<br><span class="text-xs text-gray-500">Ultra</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings (Collapsible) -->
+                <div>
+                    <button type="button" id="advancedToggle" class="flex items-center text-sm font-medium text-gray-700 hover:text-gray-900">
+                        <span class="mr-2">⚙️ Advanced Settings</span>
+                        <svg class="w-4 h-4 transform transition-transform" id="chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    
+                    <div id="advancedSettings" class="hidden mt-4 space-y-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Output Format -->
+                            <div>
+                                <label for="outputFormat" class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+                                <select id="outputFormat" name="output_format" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    <option value="jpg">JPG (Smaller file)</option>
+                                    <option value="png">PNG (Higher quality)</option>
+                                </select>
+                            </div>
+
+                            <!-- Safety Tolerance -->
+                            <div>
+                                <label for="safetyTolerance" class="block text-sm font-medium text-gray-700 mb-1">Safety Level</label>
+                                <select id="safetyTolerance" name="safety_tolerance" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                                    <option value="1">Very Strict</option>
+                                    <option value="2" selected>Strict</option>
+                                    <option value="3">Balanced</option>
+                                    <option value="4">Permissive</option>
+                                    <option value="5">Very Permissive</option>
+                                    <option value="6">Maximum</option>
+                                </select>
+                            </div>
+
+                            <!-- Raw Mode -->
+                            <div class="flex items-center">
+                                <input type="checkbox" id="rawMode" name="raw" class="mr-2">
+                                <label for="rawMode" class="text-sm text-gray-700">
+                                    Raw Mode (Less processed, more natural)
+                                </label>
+                            </div>
+
+                            <!-- Seed -->
+                            <div>
+                                <label for="seed" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Seed (Optional)
+                                    <span class="text-xs text-gray-500">- for reproducible results</span>
+                                </label>
+                                <input type="number" id="seed" name="seed" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Random">
+                            </div>
+                        </div>
+
+                        <!-- Image Prompt Section -->
+                        <div>
+                            <label for="imagePrompt" class="block text-sm font-medium text-gray-700 mb-1">
+                                Reference Image URL (Optional)
+                            </label>
+                            <input type="url" id="imagePrompt" name="image_prompt" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="https://example.com/image.jpg">
+                            <div class="mt-2">
+                                <label for="imageStrength" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Reference Strength: <span id="strengthValue">0.1</span>
+                                </label>
+                                <input type="range" id="imageStrength" name="image_prompt_strength" min="0" max="1" step="0.1" value="0.1" class="w-full">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Generate Button -->
+                <button 
+                    type="submit" 
+                    id="generateBtn" 
+                    class="w-full gradient-bg text-white font-medium py-3 px-6 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Generate Image ✨
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden bg-white rounded-lg card-shadow p-6 mb-8">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Generating your image...</h3>
+                <p class="text-gray-600">This usually takes 10-30 seconds</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden bg-white rounded-lg card-shadow p-6 mb-8">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Generated Image</h3>
+            <div id="resultContent"></div>
+        </div>
+
+        <!-- Recent Generations -->
+        <div class="bg-white rounded-lg card-shadow p-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Generations</h3>
+            <div id="recentGenerations" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+        const PASSWORD = localStorage.getItem('aidobe_password') || prompt('Enter API password:');
+        if (PASSWORD) localStorage.setItem('aidobe_password', PASSWORD);
+
+        // DOM Elements
+        const form = document.getElementById('generateForm');
+        const promptInput = document.getElementById('prompt');
+        const charCount = document.getElementById('charCount');
+        const loadingState = document.getElementById('loadingState');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultContent = document.getElementById('resultContent');
+        const advancedToggle = document.getElementById('advancedToggle');
+        const advancedSettings = document.getElementById('advancedSettings');
+        const chevron = document.getElementById('chevron');
+        const generateBtn = document.getElementById('generateBtn');
+
+        // State
+        let currentAspectRatio = '9:16';
+        let currentPreset = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecentGenerations();
+            
+            // Set default aspect ratio
+            document.querySelector('[data-ratio="9:16"]').classList.add('active');
+            
+            // Update character count
+            promptInput.addEventListener('input', function() {
+                charCount.textContent = this.value.length;
+            });
+
+            // Image strength slider
+            document.getElementById('imageStrength').addEventListener('input', function() {
+                document.getElementById('strengthValue').textContent = this.value;
+            });
+
+            // Advanced settings toggle
+            advancedToggle.addEventListener('click', function() {
+                advancedSettings.classList.toggle('hidden');
+                chevron.classList.toggle('rotate-180');
+            });
+
+            // Preset buttons
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const preset = this.dataset.preset;
+                    applyPreset(preset);
+                    
+                    // Visual feedback
+                    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Aspect ratio buttons
+            document.querySelectorAll('.aspect-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentAspectRatio = this.dataset.ratio;
+                    
+                    // Visual feedback
+                    document.querySelectorAll('.aspect-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Form submission
+            form.addEventListener('submit', handleGenerate);
+        });
+
+        // Preset configurations
+        const presets = {
+            portrait: { aspect_ratio: '9:16', safety_tolerance: 3, raw: false },
+            story: { aspect_ratio: '9:16', safety_tolerance: 2, raw: true },
+            square: { aspect_ratio: '1:1', safety_tolerance: 3, raw: false },
+            cinematic: { aspect_ratio: '21:9', safety_tolerance: 2, raw: true }
+        };
+
+        function applyPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+
+            currentPreset = presetName;
+            currentAspectRatio = preset.aspect_ratio;
+
+            // Update UI
+            document.querySelectorAll('.aspect-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.ratio === preset.aspect_ratio);
+            });
+
+            document.getElementById('safetyTolerance').value = preset.safety_tolerance;
+            document.getElementById('rawMode').checked = preset.raw;
+        }
+
+        async function handleGenerate(e) {
+            e.preventDefault();
+            
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                alert('Please enter a prompt');
+                return;
+            }
+
+            // Show loading state
+            loadingState.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            generateBtn.disabled = true;
+
+            try {
+                const formData = new FormData(form);
+                const modelSelection = formData.get('model') || 'openai:gpt-image-1';
+                const [provider, model] = modelSelection.split(':');
+                
+                const requestData = {
+                    prompt: prompt,
+                    provider: provider,
+                    model: model,
+                    aspect_ratio: currentAspectRatio,
+                    output_format: formData.get('output_format'),
+                    seed: formData.get('seed') ? parseInt(formData.get('seed')) : undefined,
+                    preset: currentPreset,
+                    enhance: true // Enable prompt enhancement by default
+                };
+
+                // Add provider and model-specific parameters
+                if (provider === 'openai') {
+                    Object.assign(requestData, {
+                        parameters: {
+                            model: model,
+                            size: currentAspectRatio === '9:16' ? '1024x1792' : 
+                                  currentAspectRatio === '16:9' ? '1792x1024' : '1024x1024',
+                            quality: 'hd',
+                            moderation: 'default'
+                        }
+                    });
+                } else if (provider === 'replicate') {
+                    // Add model-specific parameters for Replicate models
+                    if (model === 'black-forest-labs/flux-1.1-pro-ultra') {
+                        Object.assign(requestData, {
+                            safety_tolerance: parseInt(formData.get('safety_tolerance')) || 2,
+                            raw: formData.get('raw') === 'on',
+                            image_prompt: formData.get('image_prompt') || undefined,
+                            image_prompt_strength: parseFloat(formData.get('image_prompt_strength')) || 0.1
+                        });
+                    } else if (model === 'bytedance/seedream-3') {
+                        Object.assign(requestData, {
+                            parameters: {
+                                size: 'regular',
+                                guidance_scale: 2.5
+                            }
+                        });
+                    } else if (model === 'google/imagen-4') {
+                        Object.assign(requestData, {
+                            parameters: {
+                                safety_filter_level: 'block_only_high'
+                            }
+                        });
+                    } else if (model === 'recraft-ai/recraft-v3') {
+                        Object.assign(requestData, {
+                            parameters: {
+                                style: 'any'
+                            }
+                        });
+                    }
+                }
+
+                // Remove undefined values
+                Object.keys(requestData).forEach(key => {
+                    if (requestData[key] === undefined) {
+                        delete requestData[key];
+                    }
+                });
+
+                const response = await fetch(`${API_BASE}/api/images/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${PASSWORD}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Generation failed');
+                }
+
+                // Show results
+                displayResult(result);
+                loadRecentGenerations(); // Refresh recent generations
+
+            } catch (error) {
+                console.error('Generation error:', error);
+                alert(`Generation failed: ${error.message}`);
+            } finally {
+                loadingState.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        }
+
+        function displayResult(result) {
+            resultContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 gap-4">
+                        ${result.outputs.map(output => `
+                            <div class="relative">
+                                <img src="${output.url}" alt="Generated image" class="w-full rounded-lg shadow-md">
+                                <div class="absolute top-2 right-2">
+                                    <button onclick="downloadImage('${output.url}', '${output.id}')" class="bg-black bg-opacity-50 text-white px-3 py-1 rounded text-sm hover:bg-opacity-70">
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="text-sm text-gray-600 space-y-1">
+                        <p><strong>Original Prompt:</strong> ${result.originalPrompt}</p>
+                        ${result.enhancedPrompt ? `<p><strong>Enhanced Prompt:</strong> ${result.enhancedPrompt}</p>` : ''}
+                        <p><strong>Prompt ID:</strong> ${result.promptId}</p>
+                    </div>
+                </div>
+            `;
+            resultsSection.classList.remove('hidden');
+        }
+
+        async function loadRecentGenerations() {
+            try {
+                const response = await fetch(`${API_BASE}/api/images/history?limit=6`, {
+                    headers: {
+                        'Authorization': `Bearer ${PASSWORD}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                const container = document.getElementById('recentGenerations');
+                container.innerHTML = data.prompts.map(prompt => `
+                    <div class="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                        ${prompt.output_urls.length > 0 ? `
+                            <img src="${prompt.output_urls[0]}" alt="Generated image" class="w-full h-48 object-cover">
+                        ` : `
+                            <div class="w-full h-48 bg-gray-200 flex items-center justify-center">
+                                <span class="text-gray-500">No image</span>
+                            </div>
+                        `}
+                        <div class="p-3">
+                            <p class="text-sm text-gray-900 truncate" title="${prompt.original_prompt}">${prompt.original_prompt}</p>
+                            <p class="text-xs text-gray-500 mt-1">${new Date(prompt.created_at).toLocaleDateString()}</p>
+                            <p class="text-xs text-gray-400">${prompt.model}</p>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Failed to load recent generations:', error);
+            }
+        }
+
+        function downloadImage(url, filename) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aidobe-${filename}.jpg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>

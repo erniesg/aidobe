@@ -62,6 +62,14 @@ export class DatabaseService {
     }
   }
 
+  async updatePromptMetadata(id: string, metadata: string): Promise<void> {
+    await this.db.prepare(`
+      UPDATE prompts 
+      SET parameters = ?
+      WHERE id = ?
+    `).bind(metadata, id).run()
+  }
+
   async createOutput(output: OutputRecord): Promise<void> {
     await this.db.prepare(`
       INSERT INTO outputs (

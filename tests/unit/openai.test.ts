@@ -109,11 +109,12 @@ describe('OpenAI Service', () => {
         const result = await openaiService.generateImage('test prompt', {
           model: 'dall-e-2',
           size: '512x512',
+          quality: 'standard',
           n: 5
         })
 
         expect(result).toHaveLength(5)
-        result.forEach((item, index) => {
+        result.forEach((item: any, index: number) => {
           expect(item.url).toBe(`https://example.com/image${index}.png`)
           expect(item.revised_prompt).toBe(`enhanced prompt ${index}`)
         })
@@ -130,6 +131,7 @@ describe('OpenAI Service', () => {
         const result = await openaiService.generateImage('test', {
           model: 'dall-e-2',
           size: '256x256',
+          quality: 'standard',
           n: 1
         })
 

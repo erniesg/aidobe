@@ -18,6 +18,7 @@ database_id = "a655c188-541c-4445-9129-b1994a5f0290"
 
 [env.dev]
 vars = { ENVIRONMENT = "dev" }
+
 [[env.dev.r2_buckets]]
 binding = "R2_OUTPUTS"
 bucket_name = "aidobe-outputs"

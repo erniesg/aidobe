@@ -1,4 +1,6 @@
 #!/bin/sh
 
-# Run linting before commit (skip tests for now)
+# Run tests and linting before commit
+npm run typecheck
+npm run test:run
 npx lint-staged

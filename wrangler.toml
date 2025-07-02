@@ -1,0 +1,28 @@
+name = "aidobe"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[env.prod]
+vars = { ENVIRONMENT = "production" }
+
+[env.dev]
+vars = { ENVIRONMENT = "development" }
+
+[[r2_buckets]]
+binding = "R2_OUTPUTS"
+bucket_name = "aidobe-outputs"
+
+[[r2_buckets]]
+binding = "R2_PROMPTS"
+bucket_name = "aidobe-prompts"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aidobe"
+database_id = "a655c188-541c-4445-9129-b1994a5f0290"
+
+[vars]
+# Add these to your .dev.vars file:
+# ACCESS_PASSWORD = "your-secure-password"
+# OPENAI_API_KEY = "your-openai-key"
+# REPLICATE_API_TOKEN = "your-replicate-token"

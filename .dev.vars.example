@@ -1,0 +1,5 @@
+# Copy this file to .dev.vars and fill in your actual values
+ACCESS_PASSWORD=your-secure-password-here
+OPENAI_API_KEY=sk-your-openai-api-key
+REPLICATE_API_TOKEN=r8_your-replicate-token
+ENVIRONMENT=development

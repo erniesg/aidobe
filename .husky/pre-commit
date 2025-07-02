@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Run linting before commit (skip tests for now)
+npx lint-staged

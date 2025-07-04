@@ -332,11 +332,16 @@ describe('AudioProcessingService', () => {
             releaseTime: 0.5
           }
         },
+        soundEffects: [],
         globalSettings: {
           masterVolume: 1.0,
           finalFormat: 'mp3',
+          sampleRate: 44100,
+          bitrate: 192,
+          channels: 2,
           normalization: true,
-          limiter: { enabled: true, threshold: -1, release: 0.05 }
+          limiter: { enabled: true, threshold: -1, release: 0.05 },
+          noiseReduction: { enabled: true, strength: 0.3 }
         },
         outputDuration: 90,
         createdAt: new Date().toISOString()
@@ -358,13 +363,27 @@ describe('AudioProcessingService', () => {
         voiceAudio: {
           audioFileId: crypto.randomUUID(),
           volume: 1.0,
-          normalization: true
+          fadeIn: 0,
+          fadeOut: 0,
+          normalization: true,
+          compression: {
+            enabled: false,
+            threshold: -12,
+            ratio: 3
+          }
         },
         // No background music
         globalSettings: {
           masterVolume: 1.0,
-          finalFormat: 'wav'
+          finalFormat: 'wav',
+          sampleRate: 44100,
+          bitrate: 192,
+          channels: 2,
+          normalization: true,
+          limiter: { enabled: true, threshold: -1, release: 0.05 },
+          noiseReduction: { enabled: true, strength: 0.3 }
         },
+        soundEffects: [],
         outputDuration: 45,
         createdAt: new Date().toISOString()
       }
@@ -403,6 +422,17 @@ describe('AudioProcessingService', () => {
             attackTime: 0.05,
             releaseTime: 1.0
           }
+        },
+        soundEffects: [],
+        globalSettings: {
+          masterVolume: 1.0,
+          finalFormat: 'mp3',
+          sampleRate: 44100,
+          bitrate: 192,
+          channels: 2,
+          normalization: true,
+          limiter: { enabled: true, threshold: -1, release: 0.05 },
+          noiseReduction: { enabled: true, strength: 0.3 }
         },
         outputDuration: 60,
         createdAt: new Date().toISOString()
@@ -578,6 +608,8 @@ describe('AudioProcessingService', () => {
       const musicRequest: MusicSearchRequest = {
         jobId: ttsRequest.jobId,
         mood: 'inspirational',
+        duration: { min: 30, max: 300 },
+        licenseType: 'royalty_free',
         videoContext: {
           totalDuration: ttsResult.data!.duration,
           energyLevel: 0.7,
@@ -619,6 +651,17 @@ describe('AudioProcessingService', () => {
             attackTime: 0.1,
             releaseTime: 0.5
           }
+        },
+        soundEffects: [],
+        globalSettings: {
+          masterVolume: 1.0,
+          finalFormat: 'mp3',
+          sampleRate: 44100,
+          bitrate: 192,
+          channels: 2,
+          normalization: true,
+          limiter: { enabled: true, threshold: -1, release: 0.05 },
+          noiseReduction: { enabled: true, strength: 0.3 }
         },
         outputDuration: ttsResult.data!.duration,
         createdAt: new Date().toISOString()

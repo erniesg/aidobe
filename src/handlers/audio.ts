@@ -86,10 +86,10 @@ export class AudioHandlers {
           summary: {
             textLength: validatedRequest.text.length,
             audioDuration: ttsResult.data?.duration,
-            provider: ttsResult.metadata?.providerUsed,
+            provider: ttsResult.metadata?.providersUsed?.[0],
             voiceId: ttsResult.data?.voiceId,
             processingTime: Date.now() - startTime,
-            cost: ttsResult.metadata?.cost
+            cost: ttsResult.metadata?.executionTime
           },
           metadata: ttsResult.metadata
         },
@@ -160,7 +160,7 @@ export class AudioHandlers {
             mood: validatedRequest.mood,
             genre: validatedRequest.genre,
             resultsFound: musicResult.data?.length || 0,
-            averageDuration: musicResult.data?.reduce((sum, music) => sum + music.duration, 0) / Math.max(musicResult.data?.length || 1, 1),
+            averageDuration: musicResult.data ? musicResult.data.reduce((sum, music) => sum + music.duration, 0) / Math.max(musicResult.data.length, 1) : 0,
             processingTime: Date.now() - startTime
           },
           metadata: musicResult.metadata

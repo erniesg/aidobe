@@ -310,6 +310,8 @@ describe('AudioProcessingService', () => {
       const request: MusicSearchRequest = {
         jobId: crypto.randomUUID(),
         mood: 'upbeat',
+        duration: { min: 30, max: 90 },
+        licenseType: 'royalty_free',
         maxResults: 5
       }
 
@@ -475,7 +477,18 @@ describe('AudioProcessingService', () => {
           }
         },
         outputDuration: 30,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        soundEffects: [],
+        globalSettings: {
+          masterVolume: 1.0,
+          finalFormat: 'mp3',
+          sampleRate: 44100,
+          bitrate: 192,
+          channels: 2,
+          normalization: true,
+          limiter: { enabled: true, threshold: -1, release: 0.05 },
+          noiseReduction: { enabled: true, strength: 0.3 }
+        }
       }
 
       const result = await service.mixAudio(config)

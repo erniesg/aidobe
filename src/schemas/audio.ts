@@ -362,7 +362,7 @@ export function extractSentenceBoundaries(
   text: string, 
   wordTimings: WordTiming[]
 ): Array<{text: string, startTime: number, endTime: number}> {
-  const sentences = text.match(/[^\.!?]+[\.!?]+/g) || [text]
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text]
   const result: Array<{text: string, startTime: number, endTime: number}> = []
   
   let wordIndex = 0

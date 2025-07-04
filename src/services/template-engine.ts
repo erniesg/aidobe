@@ -200,7 +200,7 @@ export class TemplateEngine {
     })
 
     // Handle simple conditionals {% if condition %}...{% endif %}
-    const conditionalPattern = /\{\%\s*if\s+([^%]+)\s*\%\}(.*?)\{\%\s*endif\s*\%\}/gs
+    const conditionalPattern = /{%\s*if\s+([^%]+)\s*%}(.*?){%\s*endif\s*%}/gs
     output = output.replace(conditionalPattern, (match, condition, content) => {
       const trimmedCondition = condition.trim()
       const value = this.getNestedValue(variables, trimmedCondition)
@@ -214,7 +214,7 @@ export class TemplateEngine {
     })
 
     // Handle simple loops {% for item in array %}...{% endfor %}
-    const forPattern = /\{\%\s*for\s+(\w+)\s+in\s+([^%]+)\s*\%\}(.*?)\{\%\s*endfor\s*\%\}/gs
+    const forPattern = /{%\s*for\s+(\w+)\s+in\s+([^%]+)\s*%}(.*?){%\s*endfor\s*%}/gs
     output = output.replace(forPattern, (match, itemName, arrayPath, content) => {
       const array = this.getNestedValue(variables, arrayPath.trim())
       
@@ -323,9 +323,10 @@ export class TemplateEngine {
         return Array.isArray(value) ? value.join(', ') : String(value)
       case 'trim':
         return String(value).trim()
-      case 'truncate':
+      case 'truncate': {
         const str = String(value)
         return str.length > 100 ? str.slice(0, 97) + '...' : str
+      }
       default:
         return String(value)
     }

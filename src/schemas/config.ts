@@ -1,7 +1,20 @@
 import { z } from 'zod'
 
-// Model configuration schema for LLM configurations
-export const ModelConfigSchema = z.object({
+// Basic model configuration schema for simple usage
+export const BasicModelConfigSchema = z.object({
+  provider: z.enum(['openai', 'anthropic', 'google', 'replicate', 'huggingface']),
+  model: z.string().min(1),
+  temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().positive().optional(),
+  systemPrompt: z.string().optional(),
+  fallbackModel: z.string().optional(),
+  version: z.string().optional(),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional()
+})
+
+// Comprehensive model configuration schema for full features
+export const FullModelConfigSchema = z.object({
   id: z.string().uuid(),
   name: z.string().min(1).max(100),
   version: z.string(),
@@ -60,84 +73,32 @@ export const ModelConfigSchema = z.object({
   createdBy: z.string().optional()
 })
 
+// Use basic schema by default for simplicity
+export const ModelConfigSchema = BasicModelConfigSchema
+
 export type ModelConfig = z.infer<typeof ModelConfigSchema>
 
-// Prompt template schema for versioned prompts
+// Simplified prompt template schema for basic usage
 export const PromptTemplateSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  category: z.enum([
-    'script_generation',
-    'scene_extraction',
-    'asset_description',
-    'quality_evaluation',
-    'content_analysis',
-    'prompt_enhancement'
-  ]),
-  
-  // Template content
-  template: z.string().min(10), // Jinja2 template with variables
-  
-  // Variables that can be injected into the template
+  category: z.string(),
+  content: z.string().min(10), // Jinja2 template with variables
+  version: z.string(),
   variables: z.array(z.object({
     name: z.string().min(1),
     type: z.enum(['string', 'number', 'boolean', 'array', 'object']),
-    description: z.string(),
-    required: z.boolean().default(true),
-    defaultValue: z.unknown().optional(),
-    validation: z.object({
-      minLength: z.number().int().optional(),
-      maxLength: z.number().int().optional(),
-      pattern: z.string().optional(), // regex pattern
-      options: z.array(z.string()).optional() // for enum-like variables
-    }).optional()
+    required: z.boolean(),
+    description: z.string()
   })),
-  
-  // Example usage
-  examples: z.array(z.object({
-    name: z.string(),
+  metadata: z.object({
     description: z.string().optional(),
-    variables: z.record(z.unknown()),
-    expectedOutput: z.string().optional()
-  })).default([]),
-  
-  // Version and deployment info
-  version: z.string(),
-  status: z.enum(['draft', 'testing', 'active', 'deprecated']).default('draft'),
-  
-  // Model compatibility
-  compatibleModels: z.array(z.string()).default([]), // model IDs
-  recommendedModel: z.string().optional(), // preferred model ID
-  
-  // Performance metrics
-  metrics: z.object({
-    successRate: z.number().min(0).max(1).optional(),
-    averageQuality: z.number().min(0).max(1).optional(),
-    averageTokenUsage: z.number().int().positive().optional(),
-    lastEvaluated: z.string().datetime().optional()
-  }).default({}),
-  
-  // A/B testing configuration
-  abTesting: z.object({
-    enabled: z.boolean().default(false),
-    trafficPercentage: z.number().min(0).max(100).default(0),
-    comparisonTemplateId: z.string().uuid().optional(),
-    testStarted: z.string().datetime().optional(),
-    testEnds: z.string().datetime().optional()
-  }).default({}),
-  
-  // Change tracking
-  changelog: z.array(z.object({
-    version: z.string(),
-    changes: z.string(),
-    changedBy: z.string(),
-    changedAt: z.string().datetime()
-  })).default([]),
-  
+    author: z.string().optional(),
+    tags: z.array(z.string()).default([]),
+    isActive: z.boolean().default(true)
+  }).optional(),
   createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  createdBy: z.string().optional()
+  updatedAt: z.string().datetime()
 })
 
 export type PromptTemplate = z.infer<typeof PromptTemplateSchema>

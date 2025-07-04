@@ -625,13 +625,15 @@ export class ScriptGenerationService {
     switch (edit.action) {
       case 'replace':
         return edit.value
-      case 'insert':
+      case 'insert': {
         const pos = edit.position || 0
         return text.slice(0, pos) + edit.value + text.slice(pos)
-      case 'delete':
+      }
+      case 'delete': {
         const start = edit.position || 0
         const end = start + (edit.length || 0)
         return text.slice(0, start) + text.slice(end)
+      }
       case 'append':
         return text + edit.value
       case 'prepend':

@@ -1,8 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ScriptGenerationService } from '../../../src/services/script-generation'
 import type { Env } from '../../../src/types/env'
-import type { GenerateScriptRequest, EditScriptRequest } from '../../../src/schemas/script'
+import type { 
+  GenerateScriptRequest, 
+  EditScriptRequest, 
+  StructuredScriptGenerationRequest, 
+  StructuredScript 
+} from '../../../src/schemas/script'
 import type { Article } from '../../../src/schemas/job'
+
+// Mock template engine
+vi.mock('../../../src/services/template-engine', () => ({
+  TemplateEngine: vi.fn().mockImplementation(() => ({
+    renderTemplate: vi.fn(),
+    loadTemplate: vi.fn(),
+    clearCache: vi.fn(),
+    listTemplates: vi.fn()
+  }))
+}))
 
 // Mock implementations
 const mockLLMProvider = {
@@ -13,6 +28,13 @@ const mockConfigService = {
   getModelConfig: vi.fn(),
   getPromptTemplate: vi.fn(),
   renderPrompt: vi.fn()
+}
+
+const mockTemplateEngine = {
+  renderTemplate: vi.fn(),
+  loadTemplate: vi.fn(),
+  clearCache: vi.fn(),
+  listTemplates: vi.fn()
 }
 
 const mockEnv: Env = {
@@ -32,6 +54,8 @@ describe('ScriptGenerationService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     service = new ScriptGenerationService(mockEnv, mockLLMProvider, mockConfigService)
+    // Replace the template engine with our mock
+    ;(service as any).templateEngine = mockTemplateEngine
   })
 
   describe('parseArticles', () => {
@@ -488,6 +512,405 @@ Hashtags: #technology #science #breakthrough #viral`)
 
       expect(result[0].content).toContain('émojis')
       expect(result[0].content).toContain('🚀')
+    })
+  })
+
+  describe('generateStructuredScripts', () => {
+    it('should generate structured scripts with wanx-inspired segments', async () => {
+      const request: StructuredScriptGenerationRequest = {
+        jobId: 'test-job-id',
+        articleIds: ['article-1', 'article-2'],
+        contentPreferences: {
+          style: 'tech_in_asia',
+          targetDuration: 90,
+          targetAudience: 'tech enthusiasts',
+          energyLevel: 'high',
+          includeConflict: true
+        },
+        productionPreferences: {
+          visualStyle: 'modern',
+          musicVibe: 'upbeat electronic',
+          overallTone: 'enthusiastic'
+        },
+        generationConfig: {
+          numberOfVariations: 2,
+          temperature: 0.8,
+          promptTemplate: 'tech-in-asia-script-v2'
+        }
+      }
+
+      // Mock template engine rendering
+      mockTemplateEngine.renderTemplate.mockResolvedValue({
+        success: true,
+        output: 'Generate a structured TikTok script with the following segments...',
+        renderTime: 50,
+        variablesUsed: ['targetDuration', 'style', 'targetAudience'],
+        missingVariables: []
+      })
+
+      // Mock structured JSON response from LLM
+      const mockStructuredResponse = {
+        videoStructure: {
+          throughline: 'Revolutionary AI breakthrough changes everything',
+          title: 'AI Breakthrough That Will Shock You! 🤖',
+          duration: '90 seconds',
+          targetAudience: 'tech enthusiasts',
+          style: 'tech_in_asia',
+          energyLevel: 'high',
+          complexity: 'moderate'
+        },
+        scriptSegments: {
+          hook: {
+            orderId: 1,
+            segmentType: 'hook',
+            voiceover: 'Did you know AI just achieved something impossible?',
+            visualDirection: 'Close-up shot of surprised face, then quick cut to AI visualization',
+            bRollKeywords: ['ai', 'breakthrough', 'technology', 'robot']
+          },
+          conflict: {
+            orderId: 2,
+            segmentType: 'conflict',
+            voiceover: 'Scientists said this would take decades, but it happened overnight',
+            visualDirection: 'Split screen showing old predictions vs new reality',
+            bRollKeywords: ['scientists', 'prediction', 'timeline', 'research']
+          },
+          body: [
+            {
+              orderId: 3,
+              segmentType: 'body',
+              voiceover: 'Here\'s exactly what happened and why it matters',
+              visualDirection: 'Animated explanation with clear graphics',
+              bRollKeywords: ['explanation', 'data', 'charts', 'innovation']
+            }
+          ],
+          conclusion: {
+            orderId: 4,
+            segmentType: 'conclusion',
+            voiceover: 'This changes everything we thought we knew about AI',
+            visualDirection: 'Dramatic reveal shot with future implications',
+            bRollKeywords: ['future', 'impact', 'change', 'evolution']
+          }
+        },
+        productionNotes: {
+          musicVibe: 'upbeat electronic with builds',
+          overallTone: 'enthusiastic and informative'
+        }
+      }
+
+      mockLLMProvider.generateText.mockResolvedValueOnce(JSON.stringify(mockStructuredResponse))
+      mockLLMProvider.generateText.mockResolvedValueOnce(JSON.stringify({
+        ...mockStructuredResponse,
+        videoStructure: {
+          ...mockStructuredResponse.videoStructure,
+          title: 'Mind-Blowing AI Discovery! 🚀'
+        }
+      }))
+
+      const result = await service.generateStructuredScripts(request)
+
+      expect(result).toHaveLength(2)
+      expect(result[0]).toMatchObject({
+        jobId: 'test-job-id',
+        version: 1,
+        videoStructure: {
+          throughline: 'Revolutionary AI breakthrough changes everything',
+          title: 'AI Breakthrough That Will Shock You! 🤖',
+          duration: '90 seconds',
+          targetAudience: 'tech enthusiasts',
+          style: 'tech_in_asia',
+          energyLevel: 'high',
+          complexity: 'moderate'
+        },
+        scriptSegments: {
+          hook: expect.objectContaining({
+            orderId: 1,
+            segmentType: 'hook',
+            voiceover: expect.stringContaining('impossible'),
+            visualDirection: expect.any(String),
+            bRollKeywords: expect.arrayContaining(['ai', 'breakthrough'])
+          }),
+          conflict: expect.objectContaining({
+            orderId: 2,
+            segmentType: 'conflict',
+            voiceover: expect.any(String)
+          }),
+          body: expect.arrayContaining([
+            expect.objectContaining({
+              orderId: 3,
+              segmentType: 'body',
+              voiceover: expect.any(String)
+            })
+          ]),
+          conclusion: expect.objectContaining({
+            orderId: 4,
+            segmentType: 'conclusion',
+            voiceover: expect.any(String)
+          })
+        },
+        productionNotes: {
+          musicVibe: 'upbeat electronic with builds',
+          overallTone: 'enthusiastic and informative'
+        }
+      })
+
+      expect(result[0].qualityMetrics).toBeDefined()
+      expect(result[0].generationMetadata.templateUsed).toBe('tech-in-asia-script-v2')
+      expect(result[0].status).toBe('generated')
+    })
+
+    it('should handle template rendering failures gracefully', async () => {
+      const request: StructuredScriptGenerationRequest = {
+        jobId: 'test-job-id',
+        articleIds: ['article-1'],
+        generationConfig: {
+          numberOfVariations: 1 // Only test 1 variation to get specific error
+        }
+      }
+
+      mockTemplateEngine.renderTemplate.mockResolvedValue({
+        success: false,
+        error: 'Template not found',
+        renderTime: 10,
+        variablesUsed: [],
+        missingVariables: ['required_var']
+      })
+
+      await expect(service.generateStructuredScripts(request)).rejects.toThrow('Template rendering failed')
+    })
+
+    it('should handle malformed JSON response from LLM', async () => {
+      const request: StructuredScriptGenerationRequest = {
+        jobId: 'test-job-id',
+        articleIds: ['article-1'],
+        generationConfig: {
+          numberOfVariations: 1 // Only test 1 variation to get specific error
+        }
+      }
+
+      mockTemplateEngine.renderTemplate.mockResolvedValue({
+        success: true,
+        output: 'test prompt',
+        renderTime: 10,
+        variablesUsed: [],
+        missingVariables: []
+      })
+
+      // Return malformed JSON
+      mockLLMProvider.generateText.mockResolvedValue('This is not valid JSON response')
+
+      await expect(service.generateStructuredScripts(request)).rejects.toThrow('Failed to parse structured response')
+    })
+
+    it('should extract JSON from markdown-wrapped response', async () => {
+      const request: StructuredScriptGenerationRequest = {
+        jobId: 'test-job-id',
+        articleIds: ['article-1'],
+        generationConfig: {
+          numberOfVariations: 1 // Only test 1 variation for specific test
+        }
+      }
+
+      mockTemplateEngine.renderTemplate.mockResolvedValue({
+        success: true,
+        output: 'test prompt',
+        renderTime: 10,
+        variablesUsed: [],
+        missingVariables: []
+      })
+
+      const mockStructuredResponse = {
+        videoStructure: {
+          throughline: 'Test throughline with sufficient length',
+          title: 'Test Title',
+          duration: '60 seconds',
+          targetAudience: 'general',
+          style: 'tech_in_asia',
+          energyLevel: 'medium',
+          complexity: 'simple'
+        },
+        scriptSegments: {
+          hook: {
+            orderId: 1,
+            segmentType: 'hook',
+            voiceover: 'Test hook',
+            visualDirection: 'Test visual direction',
+            bRollKeywords: ['test', 'hook']
+          },
+          body: [
+            {
+              orderId: 2,
+              segmentType: 'body',
+              voiceover: 'Test body content',
+              visualDirection: 'Body visual direction',
+              bRollKeywords: ['body', 'content']
+            }
+          ],
+          conclusion: {
+            orderId: 3,
+            segmentType: 'conclusion',
+            voiceover: 'Test conclusion',
+            visualDirection: 'Test visual end direction',
+            bRollKeywords: ['conclusion', 'end']
+          }
+        },
+        productionNotes: {
+          musicVibe: 'calm',
+          overallTone: 'informative'
+        }
+      }
+
+      // Wrap JSON in markdown
+      const markdownResponse = `Here's the structured script:
+\`\`\`json
+${JSON.stringify(mockStructuredResponse)}
+\`\`\``
+
+      mockLLMProvider.generateText.mockResolvedValue(markdownResponse)
+
+      const result = await service.generateStructuredScripts(request)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].videoStructure.title).toBe('Test Title')
+    })
+
+    it('should calculate quality metrics correctly', async () => {
+      const request: StructuredScriptGenerationRequest = {
+        jobId: 'test-job-id',
+        articleIds: ['article-1'],
+        generationConfig: {
+          numberOfVariations: 1 // Only test 1 variation for specific test
+        }
+      }
+
+      mockTemplateEngine.renderTemplate.mockResolvedValue({
+        success: true,
+        output: 'test prompt',
+        renderTime: 10,
+        variablesUsed: [],
+        missingVariables: []
+      })
+
+      // High-quality response with impact words and good structure
+      const highQualityResponse = {
+        videoStructure: {
+          throughline: 'Amazing breakthrough that defies all expectations',
+          title: 'Incredible Discovery!',
+          duration: '60 seconds',
+          targetAudience: 'general',
+          style: 'tech_in_asia',
+          energyLevel: 'high',
+          complexity: 'moderate'
+        },
+        scriptSegments: {
+          hook: {
+            orderId: 1,
+            segmentType: 'hook',
+            voiceover: 'This shocking discovery will amaze you and change everything!',
+            visualDirection: 'Dramatic close-up with stunning visual effects and quick cuts',
+            bRollKeywords: ['shocking', 'discovery', 'amazing']
+          },
+          conflict: {
+            orderId: 2,
+            segmentType: 'conflict',
+            voiceover: 'But scientists said this was impossible',
+            visualDirection: 'Expert interviews and contradicting evidence',
+            bRollKeywords: ['scientists', 'impossible', 'evidence']
+          },
+          body: [
+            {
+              orderId: 3,
+              segmentType: 'body',
+              voiceover: 'Here\'s the incredible truth behind it all',
+              visualDirection: 'Detailed animation explaining the breakthrough with clear graphics',
+              bRollKeywords: ['truth', 'breakthrough', 'explanation']
+            }
+          ],
+          conclusion: {
+            orderId: 4,
+            segmentType: 'conclusion',
+            voiceover: 'This changes everything we thought we knew',
+            visualDirection: 'Dramatic finale with future implications montage',
+            bRollKeywords: ['changes', 'everything', 'future']
+          }
+        },
+        productionNotes: {
+          musicVibe: 'epic and dramatic',
+          overallTone: 'mind-blowing'
+        }
+      }
+
+      mockLLMProvider.generateText.mockResolvedValue(JSON.stringify(highQualityResponse))
+
+      const result = await service.generateStructuredScripts(request)
+
+      expect(result[0].qualityMetrics.hookEngagement).toBeGreaterThan(0.8)
+      expect(result[0].qualityMetrics.narrativeFlow).toBeGreaterThan(0.8)
+      expect(result[0].qualityMetrics.visualDirection).toBeGreaterThan(0.5)
+      expect(result[0].qualityMetrics.overallScore).toBeGreaterThan(0.7)
+    })
+
+    it('should use default configuration when not provided', async () => {
+      const request: StructuredScriptGenerationRequest = {
+        jobId: 'test-job-id',
+        articleIds: ['article-1']
+        // No configurations provided, should use defaults
+      }
+
+      mockTemplateEngine.renderTemplate.mockResolvedValue({
+        success: true,
+        output: 'test prompt',
+        renderTime: 10,
+        variablesUsed: [],
+        missingVariables: []
+      })
+
+      const mockResponse = {
+        videoStructure: {
+          throughline: 'Default script throughline with sufficient length',
+          title: 'Default Title',
+          duration: '60 seconds',
+          targetAudience: 'general',
+          style: 'tech_in_asia',
+          energyLevel: 'medium',
+          complexity: 'moderate'
+        },
+        scriptSegments: {
+          hook: {
+            orderId: 1,
+            segmentType: 'hook',
+            voiceover: 'Default hook',
+            visualDirection: 'Default visual direction',
+            bRollKeywords: ['default', 'hook']
+          },
+          body: [
+            {
+              orderId: 2,
+              segmentType: 'body',
+              voiceover: 'Default body content',
+              visualDirection: 'Default body visual',
+              bRollKeywords: ['default', 'body']
+            }
+          ],
+          conclusion: {
+            orderId: 3,
+            segmentType: 'conclusion',
+            voiceover: 'Default conclusion',
+            visualDirection: 'Default end visual direction',
+            bRollKeywords: ['default', 'end']
+          }
+        },
+        productionNotes: {
+          musicVibe: 'neutral',
+          overallTone: 'informative'
+        }
+      }
+
+      mockLLMProvider.generateText.mockResolvedValue(JSON.stringify(mockResponse))
+
+      const result = await service.generateStructuredScripts(request)
+
+      expect(result).toHaveLength(3) // Default numberOfVariations
+      expect(result[0].generationMetadata.templateUsed).toBe('tech-in-asia-script-v2') // Default template
     })
   })
 

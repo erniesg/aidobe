@@ -268,6 +268,158 @@ app.get('/', async (c) => {
             </form>
         </div>
 
+        <!-- Video Generation Section -->
+        <div class="bg-white rounded-lg card-shadow p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-bold text-gray-900">🎬 AI Video Generation Pipeline</h2>
+                <button id="toggleVideoSection" class="text-blue-600 hover:text-blue-800 text-sm">
+                    Expand →
+                </button>
+            </div>
+            
+            <div id="videoGenerationContent" class="hidden space-y-6">
+                <!-- Step 1: Article Input -->
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Step 1: Content Input</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="articleTitle" class="block text-sm font-medium text-gray-700 mb-2">Article Title</label>
+                            <input type="text" id="articleTitle" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                   placeholder="AI Revolution in 2024: What's Next?">
+                        </div>
+                        <div>
+                            <label for="articleUrl" class="block text-sm font-medium text-gray-700 mb-2">Article URL (optional)</label>
+                            <input type="url" id="articleUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                   placeholder="https://example.com/article">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label for="articleContent" class="block text-sm font-medium text-gray-700 mb-2">Article Content</label>
+                        <textarea id="articleContent" rows="4" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                                  placeholder="The latest developments in artificial intelligence are transforming how we work and live..."></textarea>
+                    </div>
+                    <div class="mt-4">
+                        <label for="articleTags" class="block text-sm font-medium text-gray-700 mb-2">Tags (comma-separated)</label>
+                        <input type="text" id="articleTags" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                               placeholder="ai, technology, innovation, future">
+                    </div>
+                </div>
+
+                <!-- Step 2: Script Generation -->
+                <div class="border-l-4 border-green-500 pl-4">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Step 2: Script Configuration</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="scriptStyle" class="block text-sm font-medium text-gray-700 mb-2">Style</label>
+                            <select id="scriptStyle" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="tech_in_asia">Tech in Asia</option>
+                                <option value="casual">Casual</option>
+                                <option value="professional">Professional</option>
+                                <option value="energetic">Energetic</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="targetDuration" class="block text-sm font-medium text-gray-700 mb-2">Duration (seconds)</label>
+                            <input type="number" id="targetDuration" min="30" max="300" value="90" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                        <div>
+                            <label for="energyLevel" class="block text-sm font-medium text-gray-700 mb-2">Energy Level</label>
+                            <select id="energyLevel" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high" selected>High</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Audio & Music -->
+                <div class="border-l-4 border-purple-500 pl-4">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Step 3: Audio Configuration</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="ttsVoice" class="block text-sm font-medium text-gray-700 mb-2">TTS Voice</label>
+                            <select id="ttsVoice" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="alloy">Alloy (Neutral)</option>
+                                <option value="echo">Echo (Male)</option>
+                                <option value="nova">Nova (Female)</option>
+                                <option value="shimmer">Shimmer (Energetic)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="musicMood" class="block text-sm font-medium text-gray-700 mb-2">Music Mood</label>
+                            <select id="musicMood" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="upbeat">Upbeat</option>
+                                <option value="calm">Calm</option>
+                                <option value="dramatic">Dramatic</option>
+                                <option value="inspirational" selected>Inspirational</option>
+                                <option value="energetic">Energetic</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="musicVolume" class="block text-sm font-medium text-gray-700 mb-2">Music Volume</label>
+                            <input type="range" id="musicVolume" min="0" max="1" step="0.1" value="0.3" class="w-full">
+                            <div class="text-xs text-gray-500 text-center"><span id="musicVolumeValue">30%</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Generate Button -->
+                <div class="text-center">
+                    <button type="button" id="generateVideoBtn" 
+                            class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg">
+                        🎬 Generate Video Pipeline
+                    </button>
+                </div>
+
+                <!-- Video Progress -->
+                <div id="videoProgress" class="hidden">
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-900 mb-3">Video Generation Progress</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">1. Parsing Articles</span>
+                                <span id="step1Status" class="text-sm">⏳ Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">2. Generating Script</span>
+                                <span id="step2Status" class="text-sm">⏳ Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">3. Creating TTS Audio</span>
+                                <span id="step3Status" class="text-sm">⏳ Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">4. Searching Assets</span>
+                                <span id="step4Status" class="text-sm">⏳ Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">5. Selecting Music</span>
+                                <span id="step5Status" class="text-sm">⏳ Pending</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-600">6. Assembling Video</span>
+                                <span id="step6Status" class="text-sm">⏳ Pending</span>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="bg-gray-200 rounded-full h-2">
+                                <div id="progressBar" class="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Results -->
+                <div id="videoResults" class="hidden">
+                    <div class="bg-green-50 rounded-lg p-6">
+                        <h4 class="font-medium text-gray-900 mb-4">🎉 Video Generated Successfully!</h4>
+                        <div id="videoResultContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Loading State -->
         <div id="loadingState" class="hidden bg-white rounded-lg card-shadow p-6 mb-8">
             <div class="text-center">
@@ -349,6 +501,15 @@ app.get('/', async (c) => {
         const generateBtn = document.getElementById('generateBtn');
         const modelSelect = document.getElementById('model');
 
+        // Video Generation Elements
+        const toggleVideoSection = document.getElementById('toggleVideoSection');
+        const videoGenerationContent = document.getElementById('videoGenerationContent');
+        const generateVideoBtn = document.getElementById('generateVideoBtn');
+        const musicVolumeSlider = document.getElementById('musicVolume');
+        const musicVolumeValue = document.getElementById('musicVolumeValue');
+        const videoProgress = document.getElementById('videoProgress');
+        const videoResults = document.getElementById('videoResults');
+
         // State
         let currentAspectRatio = '9:16'; // Default to TikTok
         let currentModel = 'openai:gpt-image-1';
@@ -380,6 +541,27 @@ app.get('/', async (c) => {
             });
 
             // TikTok format is fixed at 9:16, no user interaction needed
+
+            // Video Generation Event Handlers
+            toggleVideoSection.addEventListener('click', function() {
+                const isHidden = videoGenerationContent.classList.contains('hidden');
+                if (isHidden) {
+                    videoGenerationContent.classList.remove('hidden');
+                    this.textContent = 'Collapse ↑';
+                } else {
+                    videoGenerationContent.classList.add('hidden');
+                    this.textContent = 'Expand →';
+                }
+            });
+
+            // Music volume slider
+            musicVolumeSlider.addEventListener('input', function() {
+                const percentage = Math.round(this.value * 100);
+                musicVolumeValue.textContent = percentage + '%';
+            });
+
+            // Video generation button
+            generateVideoBtn.addEventListener('click', generateVideo);
 
             // Clear history
             document.getElementById('clearHistory').addEventListener('click', function() {
@@ -917,6 +1099,303 @@ app.get('/', async (c) => {
             setTimeout(() => {
                 updateSettingsButton();
             }, 2000);
+        }
+
+        // Video Generation Functions
+        async function generateVideo() {
+            try {
+                // Validate input
+                const articleTitle = document.getElementById('articleTitle').value;
+                const articleContent = document.getElementById('articleContent').value;
+                
+                if (!articleTitle || !articleContent) {
+                    alert('Please fill in the article title and content');
+                    return;
+                }
+
+                // Show progress and disable button
+                videoProgress.classList.remove('hidden');
+                videoResults.classList.add('hidden');
+                generateVideoBtn.disabled = true;
+                generateVideoBtn.textContent = '🎬 Generating...';
+
+                const jobId = crypto.randomUUID();
+
+                // Step 1: Parse Articles
+                await updateVideoStep(1, 'processing', 16.67);
+                const articleData = {
+                    articles: [{
+                        id: crypto.randomUUID(),
+                        title: articleTitle,
+                        content: articleContent,
+                        url: document.getElementById('articleUrl').value || 'https://example.com/article',
+                        tags: document.getElementById('articleTags').value.split(',').map(tag => tag.trim()).filter(Boolean)
+                    }],
+                    jobId: jobId
+                };
+
+                const parseResponse = await fetch(API_BASE + '/api/scripts/parse-articles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify(articleData)
+                });
+
+                if (!parseResponse.ok) {
+                    throw new Error('Failed to parse articles');
+                }
+
+                const parseResult = await parseResponse.json();
+                await updateVideoStep(1, 'completed', 16.67);
+
+                // Step 2: Generate Script
+                await updateVideoStep(2, 'processing', 33.33);
+                const scriptData = {
+                    jobId: jobId,
+                    articleIds: [articleData.articles[0].id],
+                    contentPreferences: {
+                        style: document.getElementById('scriptStyle').value,
+                        targetDuration: parseInt(document.getElementById('targetDuration').value),
+                        targetAudience: 'tech enthusiasts',
+                        energyLevel: document.getElementById('energyLevel').value,
+                        includeConflict: true,
+                        bodySegmentCount: 1
+                    },
+                    generationConfig: {
+                        numberOfVariations: 1,
+                        temperature: 0.8,
+                        useStructuredOutput: true,
+                        enhancementFlags: []
+                    }
+                };
+
+                const scriptResponse = await fetch(API_BASE + '/api/scripts/generate-structured', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify(scriptData)
+                });
+
+                if (!scriptResponse.ok) {
+                    throw new Error('Failed to generate script');
+                }
+
+                const scriptResult = await scriptResponse.json();
+                const script = scriptResult.data.scripts[0];
+                await updateVideoStep(2, 'completed', 33.33);
+
+                // Step 3: Generate TTS Audio
+                await updateVideoStep(3, 'processing', 50);
+                const ttsData = {
+                    jobId: jobId,
+                    scriptId: script.id,
+                    text: script.segments.map(seg => seg.text).join(' '),
+                    voicePreferences: {
+                        provider: 'openai',
+                        voiceId: document.getElementById('ttsVoice').value
+                    },
+                    parameters: {
+                        speed: 1.0,
+                        pitch: 1.0,
+                        volume: 1.0
+                    },
+                    outputFormat: 'mp3',
+                    includeWordTimings: true
+                };
+
+                const ttsResponse = await fetch(API_BASE + '/api/audio/generate-tts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify(ttsData)
+                });
+
+                if (!ttsResponse.ok) {
+                    throw new Error('Failed to generate TTS audio');
+                }
+
+                const ttsResult = await ttsResponse.json();
+                await updateVideoStep(3, 'completed', 50);
+
+                // Step 4: Search Assets
+                await updateVideoStep(4, 'processing', 66.67);
+                const assetData = {
+                    query: script.visualDirection || articleTitle,
+                    type: 'image',
+                    providers: ['pexels'],
+                    maxResults: 3,
+                    orientation: 'vertical',
+                    license: 'all',
+                    minQuality: 0.7,
+                    excludeAI: false,
+                    minResolution: {
+                        width: 720,
+                        height: 1280
+                    }
+                };
+
+                const assetResponse = await fetch(API_BASE + '/api/assets/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify(assetData)
+                });
+
+                if (!assetResponse.ok) {
+                    throw new Error('Failed to search assets');
+                }
+
+                const assetResult = await assetResponse.json();
+                await updateVideoStep(4, 'completed', 66.67);
+
+                // Step 5: Select Music
+                await updateVideoStep(5, 'processing', 83.33);
+                const musicData = {
+                    jobId: jobId,
+                    mood: document.getElementById('musicMood').value,
+                    duration: { min: 30, max: parseInt(document.getElementById('targetDuration').value) + 10 },
+                    licenseType: 'royalty_free',
+                    maxResults: 1
+                };
+
+                const musicResponse = await fetch(API_BASE + '/api/audio/search-music', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify(musicData)
+                });
+
+                if (!musicResponse.ok) {
+                    throw new Error('Failed to search music');
+                }
+
+                const musicResult = await musicResponse.json();
+                await updateVideoStep(5, 'completed', 83.33);
+
+                // Step 6: Assemble Video (Mock)
+                await updateVideoStep(6, 'processing', 100);
+                
+                // For now, we'll just show success with the data we collected
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate assembly
+                
+                await updateVideoStep(6, 'completed', 100);
+
+                // Show results
+                showVideoResults({
+                    script: script,
+                    audio: ttsResult.data,
+                    assets: assetResult.data.assets,
+                    music: musicResult.data.musicSelections
+                });
+
+            } catch (error) {
+                console.error('Video generation error:', error);
+                alert('Video generation failed: ' + error.message);
+                resetVideoGeneration();
+            }
+        }
+
+        async function updateVideoStep(stepNumber, status, progressPercent) {
+            const stepElement = document.getElementById(`step${stepNumber}Status`);
+            const progressBar = document.getElementById('progressBar');
+            
+            if (status === 'processing') {
+                stepElement.textContent = '⏳ Processing...';
+                stepElement.className = 'text-sm text-blue-600';
+            } else if (status === 'completed') {
+                stepElement.textContent = '✅ Completed';
+                stepElement.className = 'text-sm text-green-600';
+            } else if (status === 'failed') {
+                stepElement.textContent = '❌ Failed';
+                stepElement.className = 'text-sm text-red-600';
+            }
+
+            progressBar.style.width = progressPercent + '%';
+            
+            // Small delay for visual effect
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        function showVideoResults(data) {
+            const resultContent = document.getElementById('videoResultContent');
+            
+            resultContent.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h5 class="font-medium text-gray-900 mb-2">📝 Generated Script</h5>
+                        <div class="bg-white rounded p-3 border text-sm">
+                            <strong>Hook:</strong> ${data.script.segments.find(s => s.type === 'hook')?.text || 'N/A'}<br>
+                            <strong>Body:</strong> ${data.script.segments.filter(s => s.type === 'body').map(s => s.text).join(' ') || 'N/A'}<br>
+                            <strong>CTA:</strong> ${data.script.segments.find(s => s.type === 'cta')?.text || 'N/A'}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-medium text-gray-900 mb-2">🎵 Audio Components</h5>
+                        <div class="bg-white rounded p-3 border text-sm">
+                            <strong>Voice:</strong> ${data.audio.voiceCharacteristics?.voiceId || 'Generated'}<br>
+                            <strong>Duration:</strong> ${data.audio.duration || 'N/A'}s<br>
+                            <strong>Music:</strong> ${data.music?.[0]?.title || 'Background music selected'}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 class="font-medium text-gray-900 mb-2">🖼️ Visual Assets</h5>
+                        <div class="grid grid-cols-3 gap-2">
+                            ${data.assets.slice(0, 3).map(asset => `
+                                <div class="relative">
+                                    <img src="${asset.thumbnailUrl}" alt="${asset.metadata?.tags?.[0] || 'Asset'}" 
+                                         class="w-full h-20 object-cover rounded border" 
+                                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSI+SW1hZ2U8L3RleHQ+PC9zdmc+'">
+                                    <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all rounded flex items-center justify-center">
+                                        <span class="text-white text-xs opacity-0 hover:opacity-100">Asset ${data.assets.indexOf(asset) + 1}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="text-center pt-4">
+                        <button onclick="resetVideoGeneration()" class="bg-gray-500 text-white px-4 py-2 rounded mr-2 hover:bg-gray-600">
+                            🔄 Generate Another
+                        </button>
+                        <button onclick="alert('Video download would be implemented here')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                            📥 Download Video (Coming Soon)
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            videoResults.classList.remove('hidden');
+            generateVideoBtn.disabled = false;
+            generateVideoBtn.textContent = '🎬 Generate Video Pipeline';
+        }
+
+        function resetVideoGeneration() {
+            videoProgress.classList.add('hidden');
+            videoResults.classList.add('hidden');
+            generateVideoBtn.disabled = false;
+            generateVideoBtn.textContent = '🎬 Generate Video Pipeline';
+            
+            // Reset all step statuses
+            for (let i = 1; i <= 6; i++) {
+                const stepElement = document.getElementById(`step${i}Status`);
+                stepElement.textContent = '⏳ Pending';
+                stepElement.className = 'text-sm text-gray-500';
+            }
+            
+            // Reset progress bar
+            document.getElementById('progressBar').style.width = '0%';
         }
     </script>
 </body>

@@ -167,7 +167,7 @@ export class OpenAIService {
   }
 
   // Generate optimized parameters for different use cases
-  getOptimizedParams(useCase: 'social' | 'portrait' | 'landscape' | 'art'): Partial<ImageGenerationParams> {
+  getOptimizedParams(useCase: 'social' | 'print' | 'web' | 'art'): Partial<ImageGenerationParams> {
     const optimizations = {
       social: {
         model: 'gpt-image-1' as const,
@@ -175,13 +175,13 @@ export class OpenAIService {
         quality: 'high' as const,
         moderation: 'default' as const
       },
-      portrait: {
+      print: {
         model: 'gpt-image-1' as const,
         size: '1024x1536' as const, // Vertical
         quality: 'high' as const,
         moderation: 'default' as const
       },
-      landscape: {
+      web: {
         model: 'gpt-image-1' as const,
         size: '1536x1024' as const, // Horizontal
         quality: 'high' as const,

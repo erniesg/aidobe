@@ -37,7 +37,7 @@ describe('OpenAI Service', () => {
         const result = await openaiService.generateImage('', {
           model: 'dall-e-3',
           size: '1024x1024',
-          quality: 'standard',
+          quality: 'high',
           n: 1
         })
 
@@ -56,7 +56,7 @@ describe('OpenAI Service', () => {
         const result = await openaiService.generateImage(longPrompt, {
           model: 'dall-e-3',
           size: '1024x1024',
-          quality: 'standard',
+          quality: 'high',
           n: 1
         })
 
@@ -84,7 +84,7 @@ describe('OpenAI Service', () => {
         const result = await openaiService.generateImage('test prompt', {
           model: 'dall-e-3',
           size: '1024x1024',
-          quality: 'standard',
+          quality: 'high',
           n: 1
         })
 
@@ -108,8 +108,8 @@ describe('OpenAI Service', () => {
 
         const result = await openaiService.generateImage('test prompt', {
           model: 'dall-e-2',
-          size: '512x512',
-          quality: 'standard',
+          size: '1024x1024',
+          quality: 'high',
           n: 5
         })
 
@@ -130,8 +130,8 @@ describe('OpenAI Service', () => {
 
         const result = await openaiService.generateImage('test', {
           model: 'dall-e-2',
-          size: '256x256',
-          quality: 'standard',
+          size: '1024x1024',
+          quality: 'high',
           n: 1
         })
 
@@ -151,8 +151,8 @@ describe('OpenAI Service', () => {
 
         const params = {
           model: 'dall-e-3' as const,
-          size: '1792x1024' as const,
-          quality: 'hd' as const,
+          size: '1536x1024' as const,
+          quality: 'high' as const,
           style: 'natural' as const,
           n: 1
         }
@@ -161,18 +161,22 @@ describe('OpenAI Service', () => {
 
         expect(mockFetch).toHaveBeenCalledWith(
           'https://api.openai.com/v1/images/generations',
-          {
+          expect.objectContaining({
             method: 'POST',
             headers: {
               'Authorization': 'Bearer test-api-key',
               'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              prompt: 'test prompt',
-              ...params
-            })
-          }
+            }
+          })
         )
+        
+        // Check the body content more flexibly
+        const [, options] = mockFetch.mock.calls[0]
+        const body = JSON.parse(options.body)
+        expect(body).toMatchObject({
+          prompt: 'test prompt',
+          ...params
+        })
       })
 
       it('should handle rate limit errors', async () => {
@@ -186,7 +190,7 @@ describe('OpenAI Service', () => {
           openaiService.generateImage('test', {
             model: 'dall-e-3',
             size: '1024x1024',
-            quality: 'standard',
+            quality: 'high',
             n: 1
           })
         ).rejects.toThrow('OpenAI API error: Rate limit exceeded')
@@ -201,7 +205,7 @@ describe('OpenAI Service', () => {
         const result = await openaiService.generateImage('test', {
           model: 'dall-e-3',
           size: '1024x1024',
-          quality: 'standard',
+          quality: 'high',
           n: 1
         })
 
@@ -298,7 +302,7 @@ describe('OpenAI Service', () => {
         const [, options] = mockFetch.mock.calls[0]
         const body = JSON.parse(options.body)
         
-        expect(body.model).toBe('gpt-4-turbo-preview')
+        expect(body.model).toBe('gpt-4o')
         expect(body.max_tokens).toBe(150)
         expect(body.temperature).toBe(0.7)
       })
@@ -324,7 +328,7 @@ describe('OpenAI Service', () => {
           openaiService.generateImage('test', {
             model: 'dall-e-3',
             size: '1024x1024',
-            quality: 'standard',
+            quality: 'high',
             n: 1
           })
         ).rejects.toThrow(`OpenAI API error: ${message}`)

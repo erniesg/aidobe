@@ -4,11 +4,11 @@ import type { Context, Next } from 'hono'
 import type { Env } from '../../src/types/env'
 
 describe('Auth Middleware', () => {
-  let mockNext: ReturnType<typeof vi.fn>
+  let mockNext: Next
   let mockEnv: Partial<Env>
   
   beforeEach(() => {
-    mockNext = vi.fn()
+    mockNext = vi.fn().mockResolvedValue(undefined)
     mockEnv = {
       ACCESS_PASSWORD: 'test-password-123'
     }

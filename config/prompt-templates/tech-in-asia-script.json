@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "id": "tech-in-asia-script-v2",
+    "name": "Tech in Asia Style Script Generator",
+    "description": "Generates Tech in Asia-style viral video scripts with structured segments, visual direction, and production notes",
+    "category": "script_generation",
+    "version": "2.0.0",
+    "author": "aidobe-system",
+    "createdAt": "2024-12-01T00:00:00Z",
+    "updatedAt": "2024-12-01T00:00:00Z",
+    "variables": [
+      {
+        "name": "articleTitles",
+        "type": "array",
+        "required": true,
+        "description": "Array of article titles to base the script on"
+      },
+      {
+        "name": "keyPoints",
+        "type": "array",
+        "required": true,
+        "description": "Key points extracted from articles"
+      },
+      {
+        "name": "targetDuration",
+        "type": "number",
+        "required": false,
+        "description": "Target video duration in seconds",
+        "defaultValue": 60
+      },
+      {
+        "name": "style",
+        "type": "string",
+        "required": false,
+        "description": "Video style preference",
+        "defaultValue": "tech_in_asia"
+      },
+      {
+        "name": "targetAudience",
+        "type": "string",
+        "required": false,
+        "description": "Primary target audience",
+        "defaultValue": "tech enthusiasts"
+      },
+      {
+        "name": "energyLevel",
+        "type": "string",
+        "required": false,
+        "description": "Energy level for the script",
+        "defaultValue": "high"
+      },
+      {
+        "name": "customInstructions",
+        "type": "string",
+        "required": false,
+        "description": "Additional custom instructions"
+      },
+      {
+        "name": "includeConflict",
+        "type": "boolean",
+        "required": false,
+        "description": "Whether to include a conflict segment",
+        "defaultValue": true
+      },
+      {
+        "name": "visualStyle",
+        "type": "string",
+        "required": false,
+        "description": "Visual style preference",
+        "defaultValue": "modern"
+      },
+      {
+        "name": "musicVibe",
+        "type": "string",
+        "required": false,
+        "description": "Music vibe preference",
+        "defaultValue": "upbeat electronic"
+      }
+    ],
+    "tags": ["script", "tech", "viral", "structured", "tiktok", "youtube-shorts"],
+    "isActive": true
+  },
+  "content": "You are an expert viral video script writer specializing in Tech in Asia-style content. Create a compelling, structured video script that will capture attention and drive engagement.\n\n## Context\nArticle Titles: {% for title in articleTitles %}{{ title }}{% if not loop.last %}, {% endif %}{% endfor %}\nKey Points: {% for point in keyPoints %}• {{ point }}\n{% endfor %}\nTarget Duration: {{ targetDuration }} seconds\nTarget Audience: {{ targetAudience }}\nEnergy Level: {{ energyLevel }}\nVisual Style: {{ visualStyle }}\nMusic Vibe: {{ musicVibe }}\n{% if customInstructions %}Custom Instructions: {{ customInstructions }}{% endif %}\n\n## Script Requirements\n\n**CRITICAL: You must respond with a valid JSON object matching this exact structure:**\n\n```json\n{\n  \"videoStructure\": {\n    \"throughline\": \"[Core dramatic insight that drives the entire narrative - the surprising truth or paradox]\",\n    \"title\": \"[Sharp, curiosity-piquing title under 12 words]\",\n    \"duration\": \"{{ targetDuration }}-{{ targetDuration + 20 }} seconds\",\n    \"targetAudience\": \"{{ targetAudience }}\",\n    \"style\": \"{{ style }}\",\n    \"energyLevel\": \"{{ energyLevel }}\",\n    \"complexity\": \"moderate\"\n  },\n  \"scriptSegments\": {\n    \"hook\": {\n      \"orderId\": 1,\n      \"segmentType\": \"hook\",\n      \"voiceover\": \"[Most surprising/shocking fact that stops scrolling - 15-25 words max]\",\n      \"visualDirection\": \"[Specific visual instructions - charts, footage, graphics to show]\",\n      \"bRollKeywords\": [\"keyword1\", \"keyword2\", \"keyword3\"],\n      \"duration\": 4,\n      \"emotionalTone\": \"surprise\",\n      \"pacing\": \"fast\",\n      \"emphasis\": [\"key\", \"words\"],\n      \"cameraMovement\": \"zoom_in\",\n      \"transitionType\": \"cut\"\n    },{% if includeConflict %}\n    \"conflict\": {\n      \"orderId\": 2,\n      \"segmentType\": \"conflict\",\n      \"voiceover\": \"[The challenge/contradiction that creates tension - 25-40 words]\",\n      \"visualDirection\": \"[Visual representation of the problem/challenge]\",\n      \"bRollKeywords\": [\"keyword1\", \"keyword2\", \"keyword3\"],\n      \"duration\": 8,\n      \"emotionalTone\": \"tension\",\n      \"pacing\": \"medium\",\n      \"emphasis\": [\"problem\", \"words\"],\n      \"cameraMovement\": \"static\",\n      \"transitionType\": \"fade\"\n    },{% endif %}\n    \"body\": [\n      {\n        \"orderId\": {% if includeConflict %}3{% else %}2{% endif %},\n        \"segmentType\": \"body\",\n        \"voiceover\": \"[Detailed explanation with supporting facts - 80-120 words, max 12 words per sentence]\",\n        \"visualDirection\": \"[Charts, demos, data visualizations, specific footage]\",\n        \"bRollKeywords\": [\"keyword1\", \"keyword2\", \"keyword3\", \"keyword4\"],\n        \"duration\": {{ (targetDuration * 0.6) | round }},\n        \"emotionalTone\": \"curiosity\",\n        \"pacing\": \"medium\",\n        \"emphasis\": [\"data\", \"points\"],\n        \"cameraMovement\": \"pan\",\n        \"transitionType\": \"slide\"\n      }\n    ],\n    \"conclusion\": {\n      \"orderId\": {% if includeConflict %}4{% else %}3{% endif %},\n      \"segmentType\": \"conclusion\",\n      \"voiceover\": \"[Provocative question + clear CTA - 15-25 words]\",\n      \"visualDirection\": \"[Logo, subscribe button, final compelling visual]\",\n      \"bRollKeywords\": [\"branding\", \"call-to-action\"],\n      \"duration\": 6,\n      \"emotionalTone\": \"resolution\",\n      \"pacing\": \"medium\",\n      \"emphasis\": [\"subscribe\", \"follow\"],\n      \"cameraMovement\": \"zoom_out\",\n      \"transitionType\": \"fade\"\n    }\n  },\n  \"productionNotes\": {\n    \"musicVibe\": \"{{ musicVibe }}\",\n    \"overallTone\": \"conversational yet authoritative, with {{ energyLevel }} energy\",\n    \"colorScheme\": \"{% if visualStyle == 'modern' %}vibrant{% elif visualStyle == 'minimalist' %}muted{% else %}warm{% endif %}\",\n    \"visualStyle\": \"{{ visualStyle }}\",\n    \"brandGuidelines\": {\n      \"logoPlacement\": \"bottom_right\",\n      \"fontStyle\": \"modern sans-serif\"\n    },\n    \"voiceCharacteristics\": {\n      \"gender\": \"neutral\",\n      \"age\": \"adult\",\n      \"pace\": \"{% if energyLevel == 'high' %}fast{% else %}normal{% endif %}\",\n      \"energy\": \"{% if energyLevel == 'high' %}energetic{% else %}conversational{% endif %}\"\n    },\n    \"aspectRatio\": \"9:16\",\n    \"resolution\": \"1080p\",\n    \"frameRate\": 30\n  }\n}\n```\n\n## Writing Guidelines\n\n### Voice & Style\n- **Conversational yet authoritative** - speak directly to the viewer\n- **No meta-phrases** - avoid \"today we'll discuss\" or \"in this video\"\n- **Maximum 12 words per sentence** in body segments\n- **Technical terms simplified** - explain complex concepts simply\n- **Direct, active voice** - \"Companies are building\" not \"are being built\"\n\n### Structural Requirements\n- **Hook**: Most surprising fact that stops scrolling (15-25 words)\n- **Conflict** (if included): The challenge/contradiction that creates tension\n- **Body**: 2-3 supporting facts with depth, maximum 120 words total\n- **Conclusion**: Provocative question + clear CTA\n\n### Content Priorities\n1. **Surprise factor** - what's genuinely shocking or unexpected?\n2. **Narrative tension** - what conflict drives the story forward?\n3. **Practical relevance** - why should the audience care?\n4. **Visual potential** - what can we show, not just tell?\n\n### Visual Direction Requirements\n- **Be specific** - \"Show Tesla factory robots assembling batteries\" not \"show factory footage\"\n- **Focus on data** - charts, graphs, comparison visuals\n- **Include motion** - zooms, pans, reveals for engagement\n- **Plan transitions** - how segments flow visually\n\n### B-Roll Keywords\n- **3-5 keywords per segment** for footage search\n- **Mix general and specific** - \"robots, tesla factory, battery assembly\"\n- **Consider copyright** - suggest generic alternatives\n- **Think motion** - \"time-lapse construction\" vs \"building\"\n\nGenerate the script now as a complete JSON object following the exact structure above.",
+  "examples": [
+    {
+      "name": "Tesla Cybertruck Analysis",
+      "variables": {
+        "articleTitles": ["Tesla Cybertruck Finally Hits Production", "Why the Cybertruck Took 4 Years to Build"],
+        "keyPoints": [
+          "Tesla delivered first Cybertrucks after 4-year delay",
+          "Only 10 vehicles delivered vs millions of pre-orders",
+          "Production challenges with stainless steel body",
+          "Price increased 50% from original announcement"
+        ],
+        "targetDuration": 60,
+        "style": "tech_in_asia",
+        "targetAudience": "tech enthusiasts",
+        "energyLevel": "high",
+        "includeConflict": true,
+        "visualStyle": "modern",
+        "musicVibe": "upbeat electronic"
+      }
+    },
+    {
+      "name": "AI Startup Funding",
+      "variables": {
+        "articleTitles": ["AI Startup Raises $100M Series A"],
+        "keyPoints": [
+          "Unprecedented Series A funding amount",
+          "Only 6 months after seed round",
+          "Competing with OpenAI and Google",
+          "Focus on enterprise AI solutions"
+        ],
+        "targetDuration": 45,
+        "style": "tech_in_asia",
+        "targetAudience": "startup founders",
+        "energyLevel": "medium",
+        "includeConflict": false,
+        "visualStyle": "minimalist",
+        "musicVibe": "ambient electronic"
+      }
+    }
+  ]
+}

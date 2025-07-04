@@ -1,13 +1,13 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { ReplicateService, ReplicateModelSchema } from '../services/replicate'
+import { ReplicateService, ReplicateVideoModelSchema } from '../services/replicate'
 import { StorageService } from '../services/storage'
 import { DatabaseService } from '../services/database'
 import type { Env } from '../types/env'
 
 const VideoRequestSchema = z.object({
   prompt: z.string().min(1).max(1000),
-  model: ReplicateModelSchema.default('minimax/video-01'),
+  model: ReplicateVideoModelSchema.default('minimax/video-01'),
   parameters: z.record(z.any()).optional()
 })
 
@@ -39,10 +39,9 @@ videoRoutes.post('/generate', async (c) => {
       ipAddress: c.req.header('cf-connecting-ip') || ''
     })
     
-    const config = replicate.getModelConfig(model)
-    const prediction = await replicate.createPrediction(model, {
+    // For video models, use direct prediction without image-specific config
+    const prediction = await replicate.createPrediction(model as any, {
       prompt,
-      ...config,
       ...parameters
     })
     

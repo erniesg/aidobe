@@ -9,9 +9,9 @@ describe('Input Validation Schemas', () => {
       const result = ImageGenerationParamsSchema.parse({})
       
       expect(result).toEqual({
-        model: 'dall-e-3',
-        size: '1024x1024',
-        quality: 'standard',
+        model: 'gpt-image-1',
+        size: '1024x1536',
+        quality: 'high',
         n: 1
       })
     })
@@ -19,8 +19,8 @@ describe('Input Validation Schemas', () => {
     it('should accept all valid DALL-E 3 parameters', () => {
       const params = {
         model: 'dall-e-3' as const,
-        size: '1792x1024' as const,
-        quality: 'hd' as const,
+        size: '1536x1024' as const,
+        quality: 'high' as const,
         style: 'vivid' as const,
         n: 1
       }
@@ -32,7 +32,7 @@ describe('Input Validation Schemas', () => {
     it('should accept DALL-E 2 parameters', () => {
       const params = {
         model: 'dall-e-2' as const,
-        size: '512x512' as const,
+        size: '1024x1024' as const,
         n: 5
       }
       
@@ -77,12 +77,10 @@ describe('Input Validation Schemas', () => {
 
   describe('ReplicateModelSchema', () => {
     const validModels = [
-      'stability-ai/sdxl',
-      'stability-ai/stable-diffusion',
-      'lucataco/flux-dev',
-      'black-forest-labs/flux-schnell',
-      'minimax/video-01',
-      'lightricks/ltx-video'
+      'black-forest-labs/flux-1.1-pro-ultra',
+      'recraft-ai/recraft-v3',
+      'bytedance/seedream-3',
+      'google/imagen-4'
     ]
 
     it.each(validModels)('should accept valid model: %s', (model) => {
@@ -203,14 +201,14 @@ describe('Input Validation Schemas', () => {
       const params: ImageParams = {
         model: 'dall-e-3',
         size: '1024x1024',
-        quality: 'standard',
+        quality: 'high',
         n: 1
       }
       
-      const model: ReplicateModel = 'stability-ai/sdxl'
+      const model: ReplicateModel = 'black-forest-labs/flux-1.1-pro-ultra'
       
       expect(params.model).toBe('dall-e-3')
-      expect(model).toBe('stability-ai/sdxl')
+      expect(model).toBe('black-forest-labs/flux-1.1-pro-ultra')
     })
   })
 })

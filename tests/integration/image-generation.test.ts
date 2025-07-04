@@ -28,7 +28,7 @@ describe('Image Generation Integration', () => {
     }, mockEnv)
 
     expect(response.status).toBe(401)
-    const data = await response.json()
+    const data = await response.json() as any
     expect(data.error).toBe('Missing or invalid authorization header')
   })
 
@@ -93,7 +93,7 @@ describe('Image Generation Integration', () => {
     }, mockEnv)
 
     expect(response.status).toBe(400)
-    const data = await response.json()
+    const data = await response.json() as any
     expect(data.error).toBe('Invalid request')
   })
 })

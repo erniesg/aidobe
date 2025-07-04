@@ -7,7 +7,13 @@ export const ReplicateModelSchema = z.enum([
   'google/imagen-4'
 ])
 
+export const ReplicateVideoModelSchema = z.enum([
+  'minimax/video-01',
+  'lightricks/ltx-video'
+])
+
 export type ReplicateModel = z.infer<typeof ReplicateModelSchema>
+export type ReplicateVideoModel = z.infer<typeof ReplicateVideoModelSchema>
 
 // Flux 1.1 Pro Ultra schemas (from API docs)
 export const FluxAspectRatioSchema = z.enum([
@@ -357,8 +363,18 @@ export class ReplicateService {
     overrides: Partial<FluxParameters> = {}
   ): Promise<ReplicatePrediction> {
     const basePreset = TikTokPresets[preset]
-    const params: FluxParameters = {
+    // Start with schema defaults
+    const defaultParams: FluxParameters = {
       prompt,
+      aspect_ratio: '9:16',
+      output_format: 'jpg',
+      image_prompt_strength: 0.1,
+      safety_tolerance: 2,
+      raw: false
+    }
+    
+    const params: FluxParameters = {
+      ...defaultParams,
       ...basePreset,
       ...overrides
     }

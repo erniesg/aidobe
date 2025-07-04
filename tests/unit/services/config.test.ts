@@ -418,7 +418,7 @@ describe('ConfigurationService', () => {
 
     it('should identify configuration problems', async () => {
       const badConfig: ModelConfig = {
-        provider: 'unsupported_provider',
+        provider: 'openai', // Use valid provider
         model: 'unknown_model',
         temperature: 5.0, // Invalid temperature
         maxTokens: -100, // Invalid max tokens

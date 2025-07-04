@@ -338,6 +338,17 @@ export const AssetEvaluationRequestSchema = z.object({
 
 export type AssetEvaluationRequest = z.infer<typeof AssetEvaluationRequestSchema>
 
+// Asset override request schema (for manual curation)
+export const AssetOverrideRequestSchema = z.object({
+  sceneId: z.string().uuid(),
+  assetId: z.string().uuid(),
+  reason: z.string().min(1).max(500),
+  overriddenBy: z.string(), // user ID
+  timestamp: z.string().datetime().optional()
+})
+
+export type AssetOverrideRequest = z.infer<typeof AssetOverrideRequestSchema>
+
 // Validation functions
 export function validateAssetDimensions(
   width: number, 

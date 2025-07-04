@@ -8,6 +8,9 @@ import { videoRoutes } from './handlers/video'
 import { promptRoutes } from './handlers/prompt'
 import { downloadRoutes } from './handlers/download'
 import { mediaRoutes } from './handlers/media'
+import { createScriptRoutes } from './handlers/scripts'
+import { createAssetRoutes } from './handlers/assets'
+import { createAudioRoutes } from './handlers/audio'
 import type { Env } from './types/env'
 
 const app = new Hono<{ Bindings: Env }>()
@@ -920,15 +923,44 @@ app.get('/', async (c) => {
 </html>`)
 })
 
-const api = new Hono<{ Bindings: Env }>()
-api.use('*', authMiddleware)
+// Create API with dynamic route mounting
+app.use('/api/*', authMiddleware)
 
-api.route('/images', imageRoutes)
-api.route('/videos', videoRoutes)
-api.route('/prompts', promptRoutes)
-api.route('/downloads', downloadRoutes)
+// Legacy routes (existing functionality)
+app.route('/api/images', imageRoutes)
+app.route('/api/videos', videoRoutes)
+app.route('/api/prompts', promptRoutes)
+app.route('/api/downloads', downloadRoutes)
 
-app.route('/api', api)
+// New video pipeline routes (enhanced handlers) - these will be instantiated per request
+app.all('/api/scripts/*', async (c) => {
+  const scriptRoutes = createScriptRoutes(c.env)
+  const path = c.req.path.replace('/api/scripts', '')
+  const newRequest = new Request(c.req.url.replace('/api/scripts', ''), c.req.raw)
+  
+  // Create a new context for the sub-app
+  const response = await scriptRoutes.fetch(newRequest, c.env)
+  return response
+})
+
+app.all('/api/assets/*', async (c) => {
+  const assetRoutes = createAssetRoutes(c.env)
+  const path = c.req.path.replace('/api/assets', '')
+  const newRequest = new Request(c.req.url.replace('/api/assets', ''), c.req.raw)
+  
+  const response = await assetRoutes.fetch(newRequest, c.env)
+  return response
+})
+
+app.all('/api/audio/*', async (c) => {
+  const audioRoutes = createAudioRoutes(c.env)
+  const path = c.req.path.replace('/api/audio', '')
+  const newRequest = new Request(c.req.url.replace('/api/audio', ''), c.req.raw)
+  
+  const response = await audioRoutes.fetch(newRequest, c.env)
+  return response
+})
+
 app.route('/media', mediaRoutes)
 
 export default app

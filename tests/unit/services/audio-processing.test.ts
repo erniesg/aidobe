@@ -91,7 +91,14 @@ describe('AudioProcessingService', () => {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
         text: 'Cacheable test text',
-        voicePreferences: { provider: 'openai' }
+        voicePreferences: { provider: 'openai' },
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       // First call
@@ -109,7 +116,14 @@ describe('AudioProcessingService', () => {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
         text: 'Test text',
-        voicePreferences: { provider: 'nonexistent' as any }
+        voicePreferences: { provider: 'nonexistent' as any },
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       const result = await service.generateTTS(request)
@@ -123,7 +137,13 @@ describe('AudioProcessingService', () => {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
         text: 'A very short text that will result in unusual speech rate calculations for testing purposes.',
-        parameters: { speed: 2.0 } // Very fast speech
+        parameters: { 
+          speed: 2.0, // Very fast speech
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -143,13 +163,27 @@ describe('AudioProcessingService', () => {
       const shortRequest: AudioGenerationRequest = {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
-        text: shortText
+        text: shortText,
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       const longRequest: AudioGenerationRequest = {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
-        text: longText
+        text: longText,
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       const shortResult = await service.generateTTS(shortRequest)
@@ -348,11 +382,21 @@ describe('AudioProcessingService', () => {
         jobId: crypto.randomUUID(),
         voiceAudio: {
           audioFileId: crypto.randomUUID(),
-          volume: 1.0
+          volume: 1.0,
+          fadeIn: 0,
+          fadeOut: 0,
+          normalization: true,
+          compression: {
+            enabled: false,
+            threshold: -12,
+            ratio: 3
+          }
         },
         backgroundMusic: {
           musicSelectionId: crypto.randomUUID(),
           volume: 0.5,
+          fadeIn: 1,
+          fadeOut: 1,
           ducking: {
             enabled: true,
             reduction: 0.8, // High reduction
@@ -517,7 +561,14 @@ describe('AudioProcessingService', () => {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
         text: 'Welcome to our amazing product demonstration.',
-        voicePreferences: { provider: 'openai', style: 'energetic' }
+        voicePreferences: { provider: 'openai', style: 'energetic' },
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       const ttsResult = await service.generateTTS(ttsRequest)
@@ -529,7 +580,10 @@ describe('AudioProcessingService', () => {
         mood: 'inspirational',
         videoContext: {
           totalDuration: ttsResult.data!.duration,
-          energyLevel: 0.7
+          energyLevel: 0.7,
+          keyMoments: [
+            { time: 10, description: 'Key point', intensity: 0.8 }
+          ]
         },
         maxResults: 3
       }
@@ -545,12 +599,26 @@ describe('AudioProcessingService', () => {
         voiceAudio: {
           audioFileId: ttsResult.data!.id,
           volume: 1.0,
-          normalization: true
+          fadeIn: 0,
+          fadeOut: 0,
+          normalization: true,
+          compression: {
+            enabled: false,
+            threshold: -12,
+            ratio: 3
+          }
         },
         backgroundMusic: {
           musicSelectionId: musicResult.data![0].id,
           volume: 0.2,
-          ducking: { enabled: true, reduction: 0.7 }
+          fadeIn: 1,
+          fadeOut: 1,
+          ducking: { 
+            enabled: true, 
+            reduction: 0.7,
+            attackTime: 0.1,
+            releaseTime: 0.5
+          }
         },
         outputDuration: ttsResult.data!.duration,
         createdAt: new Date().toISOString()
@@ -567,7 +635,14 @@ describe('AudioProcessingService', () => {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
         text: '', // Empty text should cause issues
-        voicePreferences: { provider: 'invalid' as any }
+        voicePreferences: { provider: 'invalid' as any },
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       const result = await service.generateTTS(invalidRequest)
@@ -580,7 +655,14 @@ describe('AudioProcessingService', () => {
       const request: AudioGenerationRequest = {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
-        text: 'Performance test text for TTS generation timing verification.'
+        text: 'Performance test text for TTS generation timing verification.',
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: true
       }
 
       const startTime = Date.now()

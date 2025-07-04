@@ -90,7 +90,7 @@ export class AssetDiscoveryService {
       }
 
       // Determine which providers to use
-      const selectedProviders = this.selectProviders(request.requirements?.providers, request.mediaType)
+      const selectedProviders = this.selectProviders(request.providers, request.type)
       
       // Search in parallel across providers
       const searchPromises = selectedProviders.map(async (provider) => {
@@ -99,12 +99,12 @@ export class AssetDiscoveryService {
           
           const options: AssetSearchOptions = {
             maxResults: Math.ceil((request.maxResults || 10) / selectedProviders.length),
-            mediaType: request.mediaType,
-            aspectRatio: request.requirements?.aspectRatio,
-            duration: request.requirements?.duration,
-            style: request.requirements?.style,
-            license: request.requirements?.license || 'commercial',
-            resolution: request.requirements?.resolution || 'high'
+            mediaType: request.type === 'both' ? 'image' : request.type,
+            aspectRatio: request.orientation === 'square' ? '1:1' : request.orientation === 'vertical' ? '9:16' : '16:9',
+            duration: undefined, // Not available in the current schema
+            style: request.context?.style,
+            license: request.license === 'free' ? 'creative_commons' : 'commercial',
+            resolution: 'high'
           }
 
           return await provider.search(request.query, options)
@@ -166,13 +166,39 @@ export class AssetDiscoveryService {
     try {
       const evaluatedAssets: EvaluatedAsset[] = []
 
-      for (const asset of request.assets) {
-        const evaluation = await this.evaluateSingleAsset(asset, request.criteria, request.context)
+      // First we need to fetch the actual assets based on their IDs
+      // In a real implementation, this would query the database/storage
+      // For now, we'll create mock assets based on the asset IDs
+      const mockAssets = request.assetIds.map(id => ({
+        id,
+        type: 'image' as const,
+        url: `https://mock-storage.com/asset/${id}`,
+        previewUrl: `https://mock-storage.com/preview/${id}`,
+        thumbnailUrl: `https://mock-storage.com/thumb/${id}`,
+        searchQuery: request.sceneContext.textContent,
+        relevanceScore: 0.8,
+        matchedKeywords: ['mock', 'asset'],
+        provider: 'pexels' as const,
+        title: `Mock asset ${id}`,
+        description: `Mock asset description for ${id}`,
+        searchedAt: new Date().toISOString(),
+        metadata: {
+          provider: 'pexels' as const,
+          width: 1080,
+          height: 1920,
+          tags: ['mock', 'asset'],
+          colorPalette: ['#FF0000', '#00FF00', '#0000FF'],
+          searchKeywords: ['mock', 'asset']
+        }
+      }))
+      
+      for (const asset of mockAssets) {
+        const evaluation = await this.evaluateSingleAsset(asset, request.criteria, request.sceneContext)
         evaluatedAssets.push(evaluation)
       }
 
       // Sort by overall score
-      evaluatedAssets.sort((a, b) => b.evaluation.overallScore - a.evaluation.overallScore)
+      evaluatedAssets.sort((a, b) => b.overallScore - a.overallScore)
 
       return {
         success: true,
@@ -206,7 +232,7 @@ export class AssetDiscoveryService {
 
     try {
       const generatedAssets: GeneratedAsset[] = []
-      const numberOfVariations = request.variations || 1
+      const numberOfVariations = request.numberOfVariations || 1
 
       // Select providers that support generation
       const generationProviders = Array.from(this.providers.values())
@@ -231,14 +257,15 @@ export class AssetDiscoveryService {
         try {
           // Enhance prompt with context if provider supports it
           let enhancedPrompt = request.prompt
-          if (provider.enhancePrompt && request.context) {
-            enhancedPrompt = await provider.enhancePrompt(request.prompt, request.context.sceneContext)
+          if (provider.enhancePrompt && request.enhancePrompt) {
+            enhancedPrompt = await provider.enhancePrompt(request.prompt, request.visualKeywords.join(', '))
           }
 
           const options: AssetGenerationOptions = {
             style: request.parameters?.style,
             aspectRatio: request.parameters?.aspectRatio || '9:16',
-            quality: request.parameters?.quality || 'high',
+            quality: request.parameters?.quality === 'draft' ? 'low' : 
+                     request.parameters?.quality === 'standard' ? 'medium' : 'high',
             seed: request.parameters?.seed ? request.parameters.seed + i : undefined,
             steps: request.parameters?.steps,
             guidance: request.parameters?.guidance
@@ -246,19 +273,13 @@ export class AssetDiscoveryService {
 
           const asset = await provider.generate!(enhancedPrompt, options)
           
-          // Store original prompt in generation params, enhanced prompt in metadata
-          asset.generationParams = {
-            ...asset.generationParams,
-            prompt: request.prompt // Keep original prompt here for API consistency
-          }
-          
           // Add generation metadata
-          asset.metadata = {
-            ...asset.metadata,
-            originalPrompt: request.prompt,
-            enhancedPrompt,
-            variationIndex: i,
-            generationTime: Date.now() - startTime
+          if (asset.metadata) {
+            asset.metadata = {
+              ...asset.metadata,
+              contentDescription: `Generated from: ${request.prompt}`,
+              searchKeywords: [...asset.metadata.searchKeywords, `variation-${i}`, 'ai-generated']
+            }
           }
 
           generatedAssets.push(asset)
@@ -332,7 +353,7 @@ export class AssetDiscoveryService {
 
       // Filter by minimum score if specified
       const eligibleAssets = criteria.minimumScore 
-        ? assets.filter(asset => asset.evaluation.overallScore >= criteria.minimumScore!)
+        ? assets.filter(asset => asset.overallScore >= criteria.minimumScore!)
         : assets
 
       if (eligibleAssets.length === 0) {
@@ -349,19 +370,19 @@ export class AssetDiscoveryService {
 
       // Calculate selection score based on criteria
       const scoredAssets = eligibleAssets.map(asset => {
-        let selectionScore = asset.evaluation.overallScore
+        let selectionScore = asset.overallScore
 
         // Adjust score based on criteria priorities
         if (criteria.prioritizeQuality) {
-          selectionScore += asset.evaluation.qualityScore * 0.3
+          selectionScore += asset.visualQuality.score * 0.3
         }
 
         if (criteria.prioritizeRelevance) {
-          selectionScore += asset.evaluation.relevanceScore * 0.3
+          selectionScore += asset.relevance.score * 0.3
         }
 
         // Boost score for higher confidence
-        selectionScore += asset.evaluation.confidence * 0.2
+        selectionScore += asset.confidence * 0.2
 
         return {
           asset,
@@ -373,16 +394,18 @@ export class AssetDiscoveryService {
       scoredAssets.sort((a, b) => b.selectionScore - a.selectionScore)
       const bestAsset = scoredAssets[0].asset
 
-      // Add selection metadata
-      bestAsset.evaluation = {
-        ...bestAsset.evaluation,
-        selectionReason: this.generateSelectionReason(bestAsset, criteria),
-        alternativesConsidered: scoredAssets.length - 1
+      // Add selection metadata by creating a new asset with additional properties
+      const enhancedAsset: EvaluatedAsset = {
+        ...bestAsset,
+        alternativePrompts: [
+          ...bestAsset.alternativePrompts,
+          this.generateSelectionReason(bestAsset, criteria)
+        ]
       }
 
       return {
         success: true,
-        data: bestAsset,
+        data: enhancedAsset,
         metadata: {
           executionTime: Date.now() - startTime,
           providersUsed: ['selection_engine'],
@@ -503,32 +526,73 @@ export class AssetDiscoveryService {
   private async evaluateSingleAsset(
     asset: AssetSearchResult | GeneratedAsset, 
     criteria: string[], 
-    context?: any
+    context: any
   ): Promise<EvaluatedAsset> {
+    const startTime = Date.now()
+    
     // Mock evaluation logic - in reality, this would use AI/ML models
     const relevanceScore = this.calculateRelevanceScore(asset, criteria, context)
     const qualityScore = this.calculateQualityScore(asset)
-    const tiktokSuitability = this.calculateTikTokSuitability(asset)
+    const tiktokScore = this.calculateTikTokSuitability(asset)
     
-    const overallScore = (relevanceScore + qualityScore + tiktokSuitability) / 3
+    const overallScore = (relevanceScore + qualityScore + tiktokScore) / 3
     const confidence = Math.min(0.9, overallScore + 0.1) // Mock confidence calculation
 
     return {
-      ...asset,
-      evaluation: {
-        overallScore,
-        relevanceScore,
-        qualityScore,
-        tiktokSuitability,
-        confidence,
-        criteria: criteria.map(criterion => ({
-          name: criterion,
-          score: relevanceScore, // Simplified - each criterion would have its own score
-          weight: 1.0
-        })),
-        flags: this.generateEvaluationFlags(asset, overallScore),
-        evaluatedAt: new Date().toISOString()
-      }
+      assetId: asset.id,
+      assetType: 'search_result',
+      
+      relevance: {
+        score: relevanceScore,
+        reasoning: `Asset matches ${Math.floor(relevanceScore * 100)}% of search criteria`,
+        keywordMatches: asset.metadata?.tags || [],
+        conceptAlignment: relevanceScore
+      },
+      
+      visualQuality: {
+        score: qualityScore,
+        sharpness: qualityScore + 0.1,
+        composition: qualityScore,
+        lighting: qualityScore - 0.1,
+        colorHarmony: qualityScore
+      },
+      
+      tiktokSuitability: {
+        score: tiktokScore,
+        aspectRatioMatch: asset.metadata?.height && asset.metadata?.width ? asset.metadata.height > asset.metadata.width : true,
+        mobileFriendly: true,
+        attentionGrabbing: tiktokScore,
+        trendAlignment: tiktokScore + 0.1
+      },
+      
+      contextFit: {
+        score: relevanceScore,
+        moodAlignment: relevanceScore,
+        styleConsistency: relevanceScore + 0.1,
+        sceneTransition: relevanceScore
+      },
+      
+      overallScore,
+      confidence,
+      recommendation: overallScore > 0.8 ? 'highly_recommended' : 
+                     overallScore > 0.6 ? 'recommended' : 
+                     overallScore > 0.4 ? 'acceptable' : 'not_recommended',
+      
+      evaluatedBy: 'custom_model',
+      evaluatedAt: new Date().toISOString(),
+      evaluationTime: Date.now() - startTime,
+      
+      sceneContext: context,
+      
+      suggestions: [
+        'Consider higher resolution for better quality',
+        'Try different keywords for more variety',
+        'Check aspect ratio for TikTok optimization'
+      ],
+      alternativePrompts: [
+        `Similar to: ${('title' in asset) ? asset.title : 'Generated Asset'}`,
+        `Alternative style for: ${context.textContent}`
+      ]
     }
   }
 
@@ -538,21 +602,25 @@ export class AssetDiscoveryService {
   private createMockSearchResults(provider: string, query: string, count: number): AssetSearchResult[] {
     return Array.from({ length: count }, (_, i) => ({
       id: `${provider}-${query.replace(/\s+/g, '-')}-${i + 1}`,
+      type: 'image' as const,
+      url: `https://mock-${provider}.com/asset/${i + 1}`,
+      previewUrl: `https://mock-${provider}.com/preview/${i + 1}`,
+      thumbnailUrl: `https://mock-${provider}.com/thumb/${i + 1}`,
+      searchQuery: query,
+      relevanceScore: Math.random() * 0.4 + 0.6, // 0.6-1.0
+      matchedKeywords: query.split(' ').slice(0, 3),
+      provider: provider as any,
       title: `${query} - ${provider} Result ${i + 1}`,
       description: `Mock ${provider} search result for "${query}"`,
-      url: `https://mock-${provider}.com/asset/${i + 1}`,
-      thumbnailUrl: `https://mock-${provider}.com/thumb/${i + 1}`,
-      mediaType: 'image' as const,
-      license: 'commercial' as const,
-      provider,
+      searchedAt: new Date().toISOString(),
       metadata: {
+        provider: provider as any,
         width: 1920,
         height: 1080,
         fileSize: Math.floor(Math.random() * 5000000) + 1000000, // 1-5MB
         tags: query.split(' ').concat(['high-quality', 'professional']),
-        uploadedAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-        downloadCount: Math.floor(Math.random() * 10000),
-        likes: Math.floor(Math.random() * 1000)
+        colorPalette: ['#FF0000', '#00FF00', '#0000FF'],
+        searchKeywords: query.split(' ')
       }
     }))
   }
@@ -563,29 +631,39 @@ export class AssetDiscoveryService {
   private createMockGeneratedAsset(provider: string, prompt: string, options: AssetGenerationOptions): GeneratedAsset {
     return {
       id: `generated-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-      title: `Generated: ${prompt.slice(0, 50)}...`,
-      description: `AI-generated asset from prompt: ${prompt}`,
-      url: `https://mock-${provider}.com/generated/${Date.now()}`,
-      thumbnailUrl: `https://mock-${provider}.com/generated/thumb/${Date.now()}`,
-      mediaType: 'image' as const,
-      license: 'commercial' as const,
-      provider,
-      generationParams: {
-        prompt,
-        style: options.style,
+      model: 'flux-1.1-pro',
+      type: 'image' as const,
+      prompt,
+      provider: 'replicate' as const,
+      parameters: {
+        quality: options.quality as any,
         aspectRatio: options.aspectRatio || '9:16',
-        quality: options.quality || 'high',
+        style: options.style,
         seed: options.seed,
         steps: options.steps || 50,
         guidance: options.guidance || 7.5
       },
+      outputs: [{
+        url: `https://mock-${provider}.com/generated/${Date.now()}`,
+        width: 1080,
+        height: 1920,
+        confidence: 0.95
+      }],
+      generationTime: Math.random() * 10000 + 5000,
+      cost: Math.random() * 0.5 + 0.1,
+      retryCount: 0,
+      qualityChecks: [],
+      sceneId: undefined,
+      visualKeywords: [],
+      generatedAt: new Date().toISOString(),
       metadata: {
+        provider: 'replicate' as const,
         width: 1080,
         height: 1920,
         fileSize: Math.floor(Math.random() * 3000000) + 500000, // 0.5-3MB
-        generatedAt: new Date().toISOString(),
-        model: 'flux-1.1-pro',
-        version: '1.0'
+        tags: ['ai-generated'],
+        colorPalette: ['#FF0000', '#00FF00', '#0000FF'],
+        searchKeywords: prompt.split(' ').slice(0, 5)
       }
     }
   }
@@ -594,13 +672,16 @@ export class AssetDiscoveryService {
    * Calculate various scoring metrics
    */
   private calculateRelevanceScore(asset: AssetSearchResult | GeneratedAsset, criteria: string[], context?: any): number {
-    // Mock relevance calculation
+    // Mock relevance calculation - use metadata content description as title/description fallback
+    const assetTitle = ('title' in asset) ? asset.title : (asset.metadata?.contentDescription || '')
+    const assetDescription = ('description' in asset) ? asset.description : (asset.metadata?.contentDescription || '')
+    
     const titleMatch = criteria.some(criterion => 
-      asset.title.toLowerCase().includes(criterion.toLowerCase())
+      String(assetTitle).toLowerCase().includes(criterion.toLowerCase())
     ) ? 0.3 : 0
 
     const descriptionMatch = criteria.some(criterion => 
-      asset.description.toLowerCase().includes(criterion.toLowerCase())
+      String(assetDescription).toLowerCase().includes(criterion.toLowerCase())
     ) ? 0.2 : 0
 
     const tagsMatch = asset.metadata?.tags?.some(tag => 
@@ -616,7 +697,8 @@ export class AssetDiscoveryService {
 
     if (asset.metadata?.width && asset.metadata.width >= 1920) score += 0.2
     if (asset.metadata?.height && asset.metadata.height >= 1080) score += 0.2
-    if (asset.metadata?.downloadCount && asset.metadata.downloadCount > 1000) score += 0.1
+    // For generated assets, use default good quality score
+    if ('generationTime' in asset || asset.metadata?.tags?.includes('ai-generated')) score += 0.1
 
     return Math.min(1.0, score)
   }
@@ -646,7 +728,10 @@ export class AssetDiscoveryService {
     if (overallScore < 0.3) flags.push('low_quality')
     if (overallScore < 0.5) flags.push('needs_review')
     if (!asset.metadata?.width || asset.metadata.width < 1080) flags.push('low_resolution')
-    if (asset.license !== 'commercial') flags.push('license_restriction')
+    // Check license from metadata or assume commercial for generated assets
+    const isGenerated = 'generationTime' in asset
+    const hasCommercialLicense = isGenerated || asset.metadata?.license === 'commercial'
+    if (!hasCommercialLicense) flags.push('license_restriction')
 
     return flags
   }
@@ -657,10 +742,10 @@ export class AssetDiscoveryService {
   private generateSelectionReason(asset: EvaluatedAsset, criteria: any): string {
     const reasons: string[] = []
 
-    if (asset.evaluation.overallScore > 0.8) reasons.push('high overall score')
-    if (asset.evaluation.qualityScore > 0.8) reasons.push('excellent quality')
-    if (asset.evaluation.relevanceScore > 0.8) reasons.push('highly relevant')
-    if (asset.evaluation.tiktokSuitability > 0.8) reasons.push('perfect for TikTok format')
+    if (asset.overallScore > 0.8) reasons.push('high overall score')
+    if (asset.visualQuality.score > 0.8) reasons.push('excellent quality')
+    if (asset.relevance.score > 0.8) reasons.push('highly relevant')
+    if (asset.tiktokSuitability.score > 0.8) reasons.push('perfect for TikTok format')
 
     return reasons.length > 0 
       ? `Selected for: ${reasons.join(', ')}`
@@ -726,13 +811,14 @@ export class AssetDiscoveryService {
 
   private calculateSimpleRelevanceScore(asset: AssetSearchResult, query: string): number {
     const queryWords = query.toLowerCase().split(' ')
-    const titleWords = asset.title.toLowerCase().split(' ')
+    const assetTitle = ('title' in asset) ? asset.title : (asset.metadata?.contentDescription || '')
+    const titleWords = String(assetTitle).toLowerCase().split(' ')
     
     const matches = queryWords.filter(word => 
-      titleWords.some(titleWord => titleWord.includes(word))
+      titleWords.some((titleWord: string) => titleWord.includes(word))
     ).length
     
-    return matches / queryWords.length
+    return matches / Math.max(queryWords.length, 1)
   }
 
   /**

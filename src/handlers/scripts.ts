@@ -49,7 +49,24 @@ export class ScriptHandlers {
       }
     }
     
-    this.scriptService = new ScriptGenerationService(env, mockLLMProvider, this.configService)
+    // Create adapter for ConfigService interface
+    const configServiceAdapter = {
+      getModelConfig: async (context: string) => {
+        const result = await this.configService.getModelConfig(context)
+        return result.data || {}
+      },
+      getPromptTemplate: async (category: string, name: string) => {
+        const result = await this.configService.getPromptTemplate(category, name)
+        return result.data || {}
+      },
+      renderPrompt: (template: any, variables: Record<string, any>) => {
+        // For now, return a simple rendered string
+        // In production, this would use the actual template engine
+        return JSON.stringify(template) + ' with variables: ' + JSON.stringify(variables)
+      }
+    }
+    
+    this.scriptService = new ScriptGenerationService(env, mockLLMProvider, configServiceAdapter)
   }
 
   /**

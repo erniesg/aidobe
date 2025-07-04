@@ -71,9 +71,14 @@ describe('AudioProcessingService', () => {
           style: 'energetic'
         },
         parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0,
           temperature: 0.7,
           stability: 0.8
-        }
+        },
+        outputFormat: 'mp3',
+        includeWordTimings: false
       }
 
       const result = await service.generateTTS(request)
@@ -203,8 +208,10 @@ describe('AudioProcessingService', () => {
         duration: { min: 30, max: 120 },
         videoContext: {
           totalDuration: 90,
-          energyLevel: 0.8
+          energyLevel: 0.8,
+          keyMoments: []
         },
+        licenseType: 'royalty_free',
         maxResults: 5
       }
 
@@ -230,8 +237,11 @@ describe('AudioProcessingService', () => {
         mood: 'calm',
         videoContext: {
           totalDuration: 60,
-          energyLevel: 0.2 // Low energy video
+          energyLevel: 0.2, // Low energy video
+          keyMoments: []
         },
+        duration: { min: 30, max: 90 },
+        licenseType: 'royalty_free',
         maxResults: 10
       }
 
@@ -252,6 +262,8 @@ describe('AudioProcessingService', () => {
       const request: MusicSearchRequest = {
         jobId: crypto.randomUUID(),
         mood: 'dramatic',
+        duration: { min: 30, max: 90 },
+        licenseType: 'royalty_free',
         maxResults: 3
       }
 
@@ -274,6 +286,8 @@ describe('AudioProcessingService', () => {
         const request: MusicSearchRequest = {
           jobId: crypto.randomUUID(),
           mood,
+          duration: { min: 30, max: 90 },
+          licenseType: 'royalty_free',
           maxResults: 2
         }
 
@@ -449,8 +463,16 @@ describe('AudioProcessingService', () => {
         id: crypto.randomUUID(),
         jobId: crypto.randomUUID(),
         voiceAudio: {
-          audioFileId: 'nonexistent-id', // This is not a valid UUID, will fail validation
-          volume: 1.0
+          audioFileId: crypto.randomUUID(),
+          volume: 1.0,
+          fadeIn: 0,
+          fadeOut: 0,
+          normalization: true,
+          compression: {
+            enabled: false,
+            threshold: -12,
+            ratio: 3
+          }
         },
         outputDuration: 30,
         createdAt: new Date().toISOString()
@@ -721,7 +743,14 @@ describe('AudioProcessingService', () => {
         jobId: crypto.randomUUID(),
         scriptId: crypto.randomUUID(),
         text: `Concurrent request number ${i + 1}`,
-        voicePreferences: { provider: 'openai' as const }
+        voicePreferences: { provider: 'openai' as const },
+        parameters: {
+          speed: 1.0,
+          pitch: 1.0,
+          volume: 1.0
+        },
+        outputFormat: 'mp3' as const,
+        includeWordTimings: false
       }))
 
       const startTime = Date.now()

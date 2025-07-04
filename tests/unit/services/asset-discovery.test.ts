@@ -33,12 +33,16 @@ describe('AssetDiscoveryService', () => {
     it('should search across multiple providers and return ranked results', async () => {
       const request: AssetSearchRequest = {
         query: 'technology startup office',
-        mediaType: 'image',
+        type: 'image',
+        providers: ['pexels', 'pixabay'],
         maxResults: 5,
-        requirements: {
-          aspectRatio: '16:9',
-          license: 'commercial',
-          resolution: 'high'
+        orientation: 'horizontal',
+        license: 'premium',
+        minQuality: 0.7,
+        excludeAI: false,
+        minResolution: {
+          width: 1920,
+          height: 1080
         }
       }
 
@@ -56,8 +60,17 @@ describe('AssetDiscoveryService', () => {
     it('should cache search results for performance', async () => {
       const request: AssetSearchRequest = {
         query: 'test query',
-        mediaType: 'image',
-        maxResults: 3
+        type: 'image',
+        providers: ['pexels'],
+        maxResults: 3,
+        orientation: 'vertical',
+        license: 'all',
+        minQuality: 0.5,
+        excludeAI: false,
+        minResolution: {
+          width: 720,
+          height: 1280
+        }
       }
 
       // First call
@@ -81,8 +94,17 @@ describe('AssetDiscoveryService', () => {
 
       const request: AssetSearchRequest = {
         query: 'test query',
-        mediaType: 'image',
-        maxResults: 3
+        type: 'image',
+        providers: ['pexels'],
+        maxResults: 3,
+        orientation: 'vertical',
+        license: 'all',
+        minQuality: 0.5,
+        excludeAI: false,
+        minResolution: {
+          width: 720,
+          height: 1280
+        }
       }
 
       const result = await service.searchAssets(request)
@@ -95,8 +117,17 @@ describe('AssetDiscoveryService', () => {
     it('should deduplicate results from multiple providers', async () => {
       const request: AssetSearchRequest = {
         query: 'unique test query',
-        mediaType: 'image',
-        maxResults: 10
+        type: 'image',
+        providers: ['pexels', 'pixabay'],
+        maxResults: 10,
+        orientation: 'vertical',
+        license: 'all',
+        minQuality: 0.5,
+        excludeAI: false,
+        minResolution: {
+          width: 720,
+          height: 1280
+        }
       }
 
       const result = await service.searchAssets(request)
@@ -113,8 +144,17 @@ describe('AssetDiscoveryService', () => {
     it('should filter by media type correctly', async () => {
       const imageRequest: AssetSearchRequest = {
         query: 'test',
-        mediaType: 'image',
-        maxResults: 5
+        type: 'image',
+        providers: ['pexels'],
+        maxResults: 5,
+        orientation: 'vertical',
+        license: 'all',
+        minQuality: 0.5,
+        excludeAI: false,
+        minResolution: {
+          width: 720,
+          height: 1280
+        }
       }
 
       const result = await service.searchAssets(imageRequest)
@@ -122,7 +162,7 @@ describe('AssetDiscoveryService', () => {
       expect(result.success).toBe(true)
       expect(result.data).toBeDefined()
       result.data!.forEach(asset => {
-        expect(asset.mediaType).toBe('image')
+        expect(asset.type).toBe('image')
       })
     })
   })
@@ -132,43 +172,56 @@ describe('AssetDiscoveryService', () => {
       const mockAssets: AssetSearchResult[] = [
         {
           id: 'test-asset-1',
-          title: 'High Quality Tech Office',
-          description: 'Modern startup office with great lighting',
+          type: 'image',
           url: 'https://example.com/asset1',
           thumbnailUrl: 'https://example.com/thumb1',
-          mediaType: 'image',
-          license: 'commercial',
-          provider: 'test',
+          searchQuery: 'technology office',
+          relevanceScore: 0.9,
+          matchedKeywords: ['office', 'technology'],
+          provider: 'pexels',
+          searchedAt: new Date().toISOString(),
           metadata: {
+            provider: 'pexels',
             width: 1920,
             height: 1080,
-            tags: ['office', 'technology', 'startup']
+            tags: ['office', 'technology', 'startup'],
+            colorPalette: ['#FF0000', '#00FF00', '#0000FF'],
+            searchKeywords: ['office', 'technology']
           }
         },
         {
           id: 'test-asset-2',
-          title: 'Low Quality Image',
-          description: 'Blurry photo of something',
+          type: 'image',
           url: 'https://example.com/asset2',
           thumbnailUrl: 'https://example.com/thumb2',
-          mediaType: 'image',
-          license: 'commercial',
-          provider: 'test',
+          searchQuery: 'low quality image',
+          relevanceScore: 0.3,
+          matchedKeywords: ['image'],
+          provider: 'pixabay',
+          searchedAt: new Date().toISOString(),
           metadata: {
+            provider: 'pixabay',
             width: 640,
             height: 480,
-            tags: ['blurry']
+            tags: ['blurry'],
+            colorPalette: ['#CCCCCC'],
+            searchKeywords: ['image', 'quality']
           }
         }
       ]
 
       const request: AssetEvaluationRequest = {
-        assets: mockAssets,
-        criteria: ['technology', 'office', 'startup'],
-        context: {
-          sceneType: 'intro',
-          sceneContext: 'Technology startup office environment'
-        }
+        assetIds: mockAssets.map(asset => asset.id),
+        sceneContext: {
+          sceneId: crypto.randomUUID(),
+          textContent: 'Technology startup office environment',
+          visualKeywords: ['technology', 'office', 'startup'],
+          duration: 5,
+          sceneType: 'intro'
+        },
+        criteria: ['relevance', 'visual_quality', 'tiktok_suitability'],
+        evaluationModel: 'claude_vision',
+        includeAlternatives: true
       }
 
       const result = await service.evaluateAssets(request)
@@ -181,45 +234,58 @@ describe('AssetDiscoveryService', () => {
       
       // Check that each asset has evaluation scores
       evaluations.forEach(asset => {
-        expect(asset.evaluation).toBeDefined()
-        expect(asset.evaluation.overallScore).toBeGreaterThanOrEqual(0)
-        expect(asset.evaluation.overallScore).toBeLessThanOrEqual(1)
-        expect(asset.evaluation.relevanceScore).toBeGreaterThanOrEqual(0)
-        expect(asset.evaluation.qualityScore).toBeGreaterThanOrEqual(0)
-        expect(asset.evaluation.tiktokSuitability).toBeGreaterThanOrEqual(0)
-        expect(asset.evaluation.confidence).toBeGreaterThanOrEqual(0)
-        expect(asset.evaluation.criteria).toHaveLength(3)
-        expect(asset.evaluation.evaluatedAt).toBeDefined()
+        expect(asset.assetId).toBeDefined()
+        expect(asset.overallScore).toBeGreaterThanOrEqual(0)
+        expect(asset.overallScore).toBeLessThanOrEqual(1)
+        expect(asset.relevance.score).toBeGreaterThanOrEqual(0)
+        expect(asset.visualQuality.score).toBeGreaterThanOrEqual(0)
+        expect(asset.tiktokSuitability.score).toBeGreaterThanOrEqual(0)
+        expect(asset.confidence).toBeGreaterThanOrEqual(0)
+        expect(asset.recommendation).toMatch(/^(highly_recommended|recommended|acceptable|not_recommended)$/)
+        expect(asset.evaluatedAt).toBeDefined()
       })
 
       // Higher quality asset should have better scores
-      const highQualityAsset = evaluations.find(a => a.id === 'test-asset-1')!
-      const lowQualityAsset = evaluations.find(a => a.id === 'test-asset-2')!
+      const highQualityAsset = evaluations.find(a => a.assetId === 'test-asset-1')!
+      const lowQualityAsset = evaluations.find(a => a.assetId === 'test-asset-2')!
       
-      expect(highQualityAsset.evaluation.qualityScore).toBeGreaterThan(lowQualityAsset.evaluation.qualityScore)
-      expect(highQualityAsset.evaluation.relevanceScore).toBeGreaterThan(lowQualityAsset.evaluation.relevanceScore)
+      expect(highQualityAsset.visualQuality.score).toBeGreaterThan(lowQualityAsset.visualQuality.score)
+      expect(highQualityAsset.relevance.score).toBeGreaterThan(lowQualityAsset.relevance.score)
     })
 
     it('should sort results by overall score', async () => {
       const mockAssets: AssetSearchResult[] = Array.from({ length: 5 }, (_, i) => ({
         id: `asset-${i}`,
-        title: `Asset ${i}`,
-        description: `Description ${i}`,
+        type: 'image' as const,
         url: `https://example.com/asset${i}`,
         thumbnailUrl: `https://example.com/thumb${i}`,
-        mediaType: 'image' as const,
-        license: 'commercial' as const,
-        provider: 'test',
+        searchQuery: 'test query',
+        relevanceScore: 0.8 - i * 0.1,
+        matchedKeywords: ['test'],
+        provider: 'pexels',
+        searchedAt: new Date().toISOString(),
         metadata: {
+          provider: 'pexels',
           width: 1920 - i * 100, // Decreasing quality
           height: 1080,
-          tags: ['test']
+          tags: ['test'],
+          colorPalette: ['#FF0000'],
+          searchKeywords: ['test']
         }
       }))
 
       const request: AssetEvaluationRequest = {
-        assets: mockAssets,
-        criteria: ['test']
+        assetIds: mockAssets.map(asset => asset.id),
+        sceneContext: {
+          sceneId: crypto.randomUUID(),
+          textContent: 'Test evaluation context',
+          visualKeywords: ['test'],
+          duration: 5,
+          sceneType: 'main'
+        },
+        criteria: ['relevance', 'visual_quality'],
+        evaluationModel: 'claude_vision',
+        includeAlternatives: true
       }
 
       const result = await service.evaluateAssets(request)
@@ -251,7 +317,7 @@ describe('AssetDiscoveryService', () => {
     it('should generate assets with AI providers', async () => {
       const request: AssetGenerationRequest = {
         prompt: 'A modern tech startup office with developers working',
-        mediaType: 'image',
+        type: 'image',
         variations: 2,
         parameters: {
           style: 'modern',
@@ -273,7 +339,7 @@ describe('AssetDiscoveryService', () => {
 
       result.data!.forEach((asset, index) => {
         expect(asset.id).toBeDefined()
-        expect(asset.mediaType).toBe('image')
+        expect(asset.type).toBe('image')
         expect(asset.generationParams).toBeDefined()
         expect(asset.generationParams?.prompt).toBe(request.prompt)
         expect(asset.metadata?.variationIndex).toBe(index)
@@ -292,7 +358,7 @@ describe('AssetDiscoveryService', () => {
 
       const request: AssetGenerationRequest = {
         prompt: 'test prompt',
-        mediaType: 'image',
+        type: 'image',
         variations: 1
       }
 
@@ -309,7 +375,7 @@ describe('AssetDiscoveryService', () => {
     it('should enhance prompts when supported', async () => {
       const request: AssetGenerationRequest = {
         prompt: 'office',
-        mediaType: 'image',
+        type: 'image',
         variations: 1,
         context: {
           sceneType: 'intro',
@@ -331,7 +397,7 @@ describe('AssetDiscoveryService', () => {
 
       const request: AssetGenerationRequest = {
         prompt: 'test prompt',
-        mediaType: 'image',
+        type: 'image',
         variations: 1
       }
 
@@ -351,7 +417,7 @@ describe('AssetDiscoveryService', () => {
           description: 'Description',
           url: 'https://example.com/1',
           thumbnailUrl: 'https://example.com/thumb1',
-          mediaType: 'image' as const,
+          type: 'image' as const,
           license: 'commercial' as const,
           provider: 'test',
           metadata: {},
@@ -372,7 +438,7 @@ describe('AssetDiscoveryService', () => {
           description: 'Description',
           url: 'https://example.com/2',
           thumbnailUrl: 'https://example.com/thumb2',
-          mediaType: 'image' as const,
+          type: 'image' as const,
           license: 'commercial' as const,
           provider: 'test',
           metadata: {},
@@ -406,7 +472,7 @@ describe('AssetDiscoveryService', () => {
           description: 'Description',
           url: 'https://example.com/1',
           thumbnailUrl: 'https://example.com/thumb1',
-          mediaType: 'image' as const,
+          type: 'image' as const,
           license: 'commercial' as const,
           provider: 'test',
           metadata: {},
@@ -447,7 +513,7 @@ describe('AssetDiscoveryService', () => {
           description: 'Description',
           url: 'https://example.com/1',
           thumbnailUrl: 'https://example.com/thumb1',
-          mediaType: 'image' as const,
+          type: 'image' as const,
           license: 'commercial' as const,
           provider: 'test',
           metadata: {},
@@ -468,7 +534,7 @@ describe('AssetDiscoveryService', () => {
           description: 'Description',
           url: 'https://example.com/2',
           thumbnailUrl: 'https://example.com/thumb2',
-          mediaType: 'image' as const,
+          type: 'image' as const,
           license: 'commercial' as const,
           provider: 'test',
           metadata: {},
@@ -563,7 +629,7 @@ describe('AssetDiscoveryService', () => {
       // This test verifies that the service doesn't crash on errors
       const request: AssetSearchRequest = {
         query: '',
-        mediaType: 'image',
+        type: 'image',
         maxResults: -1 // Invalid input
       }
 

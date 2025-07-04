@@ -212,13 +212,50 @@ export class AudioHandlers {
 
       console.log(`[${requestId}] Mixing audio for job ${validatedRequest.jobId}`)
 
-      // Mix audio
-      const mixResult = await this.audioService.mixAudio({
+      // Mix audio - create a proper AudioMixConfig
+      const audioMixConfig = {
+        id: crypto.randomUUID(),
         jobId: validatedRequest.jobId,
-        voiceAudioId: validatedRequest.voiceAudioId,
-        musicSelectionId: validatedRequest.musicSelectionId,
-        mixConfig: validatedRequest.mixConfig || {}
-      })
+        voiceAudio: {
+          audioFileId: validatedRequest.voiceAudioId,
+          volume: validatedRequest.mixConfig?.voiceVolume || 1.0,
+          fadeIn: validatedRequest.mixConfig?.fadeInDuration || 0,
+          fadeOut: validatedRequest.mixConfig?.fadeOutDuration || 0,
+          normalization: validatedRequest.mixConfig?.normalization || true,
+          compression: {
+            enabled: false,
+            threshold: -12,
+            ratio: 3
+          }
+        },
+        backgroundMusic: validatedRequest.musicSelectionId ? {
+          musicSelectionId: validatedRequest.musicSelectionId,
+          volume: validatedRequest.mixConfig?.musicVolume || 0.2,
+          fadeIn: 1,
+          fadeOut: 1,
+          ducking: {
+            enabled: validatedRequest.mixConfig?.enableDucking || true,
+            reduction: 0.6,
+            attackTime: 0.1,
+            releaseTime: 0.5
+          }
+        } : undefined,
+        soundEffects: [],
+        globalSettings: {
+          masterVolume: 1.0,
+          finalFormat: validatedRequest.mixConfig?.outputFormat || 'mp3',
+          sampleRate: 44100,
+          bitrate: 192,
+          channels: 2,
+          normalization: true,
+          limiter: { enabled: true, threshold: -1, release: 0.05 },
+          noiseReduction: { enabled: true, strength: 0.3 }
+        },
+        outputDuration: 60, // Will be calculated from actual audio
+        createdAt: new Date().toISOString()
+      }
+      
+      const mixResult = await this.audioService.mixAudio(audioMixConfig)
 
       if (!mixResult.success) {
         return c.json({
@@ -232,13 +269,17 @@ export class AudioHandlers {
       const response = {
         success: true,
         data: {
-          mixedAudio: mixResult.data,
+          mixedAudio: {
+            url: mixResult.data,
+            outputDuration: audioMixConfig.outputDuration,
+            outputFormat: audioMixConfig.globalSettings.finalFormat
+          },
           summary: {
             jobId: validatedRequest.jobId,
             voiceAudioId: validatedRequest.voiceAudioId,
             musicSelectionId: validatedRequest.musicSelectionId,
-            outputDuration: mixResult.data?.outputDuration,
-            outputFormat: mixResult.data?.globalSettings.finalFormat,
+            outputDuration: audioMixConfig.outputDuration,
+            outputFormat: audioMixConfig.globalSettings.finalFormat,
             processingTime: Date.now() - startTime
           },
           metadata: mixResult.metadata
@@ -247,7 +288,7 @@ export class AudioHandlers {
         requestId
       }
 
-      console.log(`[${requestId}] Mixed audio (${mixResult.data?.outputDuration}s) in ${Date.now() - startTime}ms`)
+      console.log(`[${requestId}] Mixed audio (${audioMixConfig.outputDuration}s) in ${Date.now() - startTime}ms`)
       return c.json(response, 200)
 
     } catch (error) {

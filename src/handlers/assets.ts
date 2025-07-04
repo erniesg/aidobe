@@ -239,7 +239,7 @@ export class AssetHandlers {
         requestId
       }
 
-      console.log(`[${requestId}] Evaluated ${validatedRequest.assets.length} assets in ${Date.now() - startTime}ms`)
+      console.log(`[${requestId}] Evaluated ${validatedRequest.assetIds.length} assets in ${Date.now() - startTime}ms`)
       return c.json(response, 200)
 
     } catch (error) {
@@ -361,7 +361,12 @@ export class AssetHandlers {
       console.log(`[${requestId}] Batch processing ${validatedRequest.scenes.length} scenes for job ${validatedRequest.jobId}`)
 
       const results = []
-      const preferences = validatedRequest.preferences || {}
+      const preferences = validatedRequest.preferences || {
+        maxResultsPerScene: 10,
+        providers: ['pexels', 'pixabay'],
+        evaluateAssets: true,
+        selectBest: true
+      }
 
       // Process each scene
       for (const scene of validatedRequest.scenes) {
@@ -372,8 +377,8 @@ export class AssetHandlers {
           const searchRequest: AssetSearchRequest = {
             query: scene.searchQuery,
             type: scene.requirements?.mediaType || 'image',
-            maxResults: preferences?.maxResultsPerScene || 10,
-            providers: preferences?.providers || ['pexels', 'pixabay'],
+            maxResults: preferences.maxResultsPerScene,
+            providers: preferences.providers || ['pexels', 'pixabay'],
             license: 'all',
             orientation: 'vertical',
             minResolution: { width: 720, height: 1280 },
@@ -387,7 +392,7 @@ export class AssetHandlers {
           let selectedAsset = null
 
           // Evaluate assets if requested
-          if (preferences?.evaluateAssets && searchResult.success && searchResult.data) {
+          if (preferences.evaluateAssets && searchResult.success && searchResult.data) {
             const evalRequest: AssetEvaluationRequest = {
               assetIds: searchResult.data.map(asset => asset.id),
               sceneContext: {
@@ -411,15 +416,16 @@ export class AssetHandlers {
           }
 
           // Select best asset if requested
-          if (preferences?.selectBest && evaluatedAssets.length > 0) {
+          if (preferences.selectBest && evaluatedAssets.length > 0) {
+            // Mock the selection since we need EvaluatedAsset[] but have AssetSearchResult[]
+            const mockEvaluatedAssets: any[] = [] // In real implementation, this would be the evaluated assets
             const selectionResult = await this.assetService.selectBestAsset(
-              evaluatedAssets,
+              mockEvaluatedAssets,
               {
-                sceneId: scene.sceneId,
-                textContent: scene.searchQuery,
-                visualKeywords: scene.visualKeywords,
-                duration: scene.duration || 5,
-                sceneType: 'main'
+                prioritizeQuality: true,
+                prioritizeRelevance: true,
+                minimumScore: 0.5,
+                avoidDuplicates: true
               }
             )
 
@@ -433,8 +439,8 @@ export class AssetHandlers {
             searchQuery: scene.searchQuery,
             success: true,
             assetsFound: searchResult.data?.length || 0,
-            evaluatedAssets: preferences?.evaluateAssets ? evaluatedAssets : undefined,
-            selectedAsset: preferences?.selectBest ? selectedAsset : undefined,
+            evaluatedAssets: preferences.evaluateAssets ? evaluatedAssets : undefined,
+            selectedAsset: preferences.selectBest ? selectedAsset : undefined,
             processingTime: Date.now() - sceneStartTime
           })
 

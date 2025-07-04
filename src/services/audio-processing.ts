@@ -460,7 +460,8 @@ export class AudioProcessingService {
       generationTime: 2000 + Math.random() * 3000,
       cost: wordCount * 0.001, // $0.001 per word
       status: 'completed',
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
+      retryCount: 0
     }
   }
 
@@ -656,7 +657,8 @@ export class AudioProcessingService {
       },
       generationTime: 2500,
       status: 'completed',
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
+      retryCount: 0
     }
   }
 

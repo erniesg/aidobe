@@ -1306,7 +1306,7 @@ app.get('/', async (c) => {
         }
 
         async function updateVideoStep(stepNumber, status, progressPercent) {
-            const stepElement = document.getElementById(`step${stepNumber}Status`);
+            const stepElement = document.getElementById('step' + stepNumber + 'Status');
             const progressBar = document.getElementById('progressBar');
             
             if (status === 'processing') {
@@ -1329,52 +1329,63 @@ app.get('/', async (c) => {
         function showVideoResults(data) {
             const resultContent = document.getElementById('videoResultContent');
             
-            resultContent.innerHTML = `
-                <div class="space-y-4">
-                    <div>
-                        <h5 class="font-medium text-gray-900 mb-2">📝 Generated Script</h5>
-                        <div class="bg-white rounded p-3 border text-sm">
-                            <strong>Hook:</strong> ${data.script.segments.find(s => s.type === 'hook')?.text || 'N/A'}<br>
-                            <strong>Body:</strong> ${data.script.segments.filter(s => s.type === 'body').map(s => s.text).join(' ') || 'N/A'}<br>
-                            <strong>CTA:</strong> ${data.script.segments.find(s => s.type === 'cta')?.text || 'N/A'}
-                        </div>
-                    </div>
+            // Build script section
+            const hookText = data.script.segments.find(s => s.type === 'hook')?.text || 'N/A';
+            const bodyText = data.script.segments.filter(s => s.type === 'body').map(s => s.text).join(' ') || 'N/A';
+            const ctaText = data.script.segments.find(s => s.type === 'cta')?.text || 'N/A';
+            
+            // Build audio section
+            const voiceId = data.audio.voiceCharacteristics?.voiceId || 'Generated';
+            const duration = data.audio.duration || 'N/A';
+            const musicTitle = data.music?.[0]?.title || 'Background music selected';
+            
+            // Build assets section
+            let assetsHtml = '';
+            data.assets.slice(0, 3).forEach((asset, index) => {
+                const tagName = asset.metadata?.tags?.[0] || 'Asset';
+                assetsHtml += '<div class="relative">';
+                assetsHtml += '<img src="' + asset.thumbnailUrl + '" alt="' + tagName + '" class="w-full h-20 object-cover rounded border" onerror="this.src=\\'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSI+SW1hZ2U8L3RleHQ+PC9zdmc+\\'">';
+                assetsHtml += '<div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all rounded flex items-center justify-center">';
+                assetsHtml += '<span class="text-white text-xs opacity-0 hover:opacity-100">Asset ' + (index + 1) + '</span>';
+                assetsHtml += '</div></div>';
+            });
+            
+            resultContent.innerHTML = 
+                '<div class="space-y-4">' +
+                    '<div>' +
+                        '<h5 class="font-medium text-gray-900 mb-2">📝 Generated Script</h5>' +
+                        '<div class="bg-white rounded p-3 border text-sm">' +
+                            '<strong>Hook:</strong> ' + hookText + '<br>' +
+                            '<strong>Body:</strong> ' + bodyText + '<br>' +
+                            '<strong>CTA:</strong> ' + ctaText +
+                        '</div>' +
+                    '</div>' +
                     
-                    <div>
-                        <h5 class="font-medium text-gray-900 mb-2">🎵 Audio Components</h5>
-                        <div class="bg-white rounded p-3 border text-sm">
-                            <strong>Voice:</strong> ${data.audio.voiceCharacteristics?.voiceId || 'Generated'}<br>
-                            <strong>Duration:</strong> ${data.audio.duration || 'N/A'}s<br>
-                            <strong>Music:</strong> ${data.music?.[0]?.title || 'Background music selected'}
-                        </div>
-                    </div>
+                    '<div>' +
+                        '<h5 class="font-medium text-gray-900 mb-2">🎵 Audio Components</h5>' +
+                        '<div class="bg-white rounded p-3 border text-sm">' +
+                            '<strong>Voice:</strong> ' + voiceId + '<br>' +
+                            '<strong>Duration:</strong> ' + duration + 's<br>' +
+                            '<strong>Music:</strong> ' + musicTitle +
+                        '</div>' +
+                    '</div>' +
                     
-                    <div>
-                        <h5 class="font-medium text-gray-900 mb-2">🖼️ Visual Assets</h5>
-                        <div class="grid grid-cols-3 gap-2">
-                            ${data.assets.slice(0, 3).map(asset => `
-                                <div class="relative">
-                                    <img src="${asset.thumbnailUrl}" alt="${asset.metadata?.tags?.[0] || 'Asset'}" 
-                                         class="w-full h-20 object-cover rounded border" 
-                                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzk5OTk5OSI+SW1hZ2U8L3RleHQ+PC9zdmc+'">
-                                    <div class="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all rounded flex items-center justify-center">
-                                        <span class="text-white text-xs opacity-0 hover:opacity-100">Asset ${data.assets.indexOf(asset) + 1}</span>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
+                    '<div>' +
+                        '<h5 class="font-medium text-gray-900 mb-2">🖼️ Visual Assets</h5>' +
+                        '<div class="grid grid-cols-3 gap-2">' +
+                            assetsHtml +
+                        '</div>' +
+                    '</div>' +
                     
-                    <div class="text-center pt-4">
-                        <button onclick="resetVideoGeneration()" class="bg-gray-500 text-white px-4 py-2 rounded mr-2 hover:bg-gray-600">
-                            🔄 Generate Another
-                        </button>
-                        <button onclick="alert('Video download would be implemented here')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                            📥 Download Video (Coming Soon)
-                        </button>
-                    </div>
-                </div>
-            `;
+                    '<div class="text-center pt-4">' +
+                        '<button onclick="resetVideoGeneration()" class="bg-gray-500 text-white px-4 py-2 rounded mr-2 hover:bg-gray-600">' +
+                            '🔄 Generate Another' +
+                        '</button>' +
+                        '<button onclick="alert(\\'Video download would be implemented here\\')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">' +
+                            '📥 Download Video (Coming Soon)' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
 
             videoResults.classList.remove('hidden');
             generateVideoBtn.disabled = false;
@@ -1389,7 +1400,7 @@ app.get('/', async (c) => {
             
             // Reset all step statuses
             for (let i = 1; i <= 6; i++) {
-                const stepElement = document.getElementById(`step${i}Status`);
+                const stepElement = document.getElementById('step' + i + 'Status');
                 stepElement.textContent = '⏳ Pending';
                 stepElement.className = 'text-sm text-gray-500';
             }

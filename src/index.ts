@@ -1315,12 +1315,66 @@ app.get('/', async (c) => {
                 const musicResult = await musicResponse.json();
                 await updateVideoStep(5, 'completed', 83.33, jobId, 'select_music');
 
-                // Step 6: Assemble Video (Mock)
+                // Step 6: Assemble Video (Real API Call)
                 await updateVideoStep(6, 'processing', 100, jobId, 'assemble_video');
                 
-                // For now, we'll just show success with the data we collected
-                await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate assembly
-                
+                // Prepare scenes data for video assembly
+                const scenes = assetResult.data.assets.map((asset, index) => ({
+                    sceneId: crypto.randomUUID(),
+                    sequenceNumber: index + 1,
+                    textContent: asset.query || "Scene " + (index + 1),
+                    startTime: index * 10, // 10 seconds per scene
+                    endTime: (index + 1) * 10,
+                    selectedAssetUrl: asset.url,
+                    assetType: asset.type,
+                    effects: {
+                        kenBurns: {
+                            enabled: true,
+                            startScale: 1.2,
+                            endScale: 1.5,
+                            direction: 'zoom_in'
+                        },
+                        transition: {
+                            type: 'fade',
+                            duration: 0.5
+                        },
+                        overlay: {
+                            enabled: false
+                        }
+                    }
+                }));
+
+                const assemblyData = {
+                    jobId: jobId,
+                    finalScriptId: crypto.randomUUID(),
+                    audioMixId: ttsResult.data.audioMixId || crypto.randomUUID(),
+                    scenes: scenes,
+                    outputConfig: {
+                        resolution: '1080p',
+                        aspectRatio: '9:16',
+                        frameRate: 30,
+                        format: 'mp4',
+                        quality: 'standard',
+                        watermark: {
+                            enabled: false
+                        }
+                    }
+                };
+
+                const assemblyResponse = await fetch(API_BASE + '/api/video/assemble', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify(assemblyData)
+                });
+
+                if (!assemblyResponse.ok) {
+                    throw new Error('Failed to assemble video');
+                }
+
+                const assemblyResult = await assemblyResponse.json();
                 await updateVideoStep(6, 'completed', 100, jobId, 'assemble_video');
 
                 // Mark job as completed
@@ -1337,7 +1391,8 @@ app.get('/', async (c) => {
                             script: script,
                             audio: ttsResult.data,
                             assets: assetResult.data.assets,
-                            music: musicResult.data.musicSelections
+                            music: musicResult.data.musicSelections,
+                            videoAssembly: assemblyResult.data
                         }
                     })
                 });
@@ -1347,7 +1402,8 @@ app.get('/', async (c) => {
                     script: script,
                     audio: ttsResult.data,
                     assets: assetResult.data.assets,
-                    music: musicResult.data.musicSelections
+                    music: musicResult.data.musicSelections,
+                    videoAssembly: assemblyResult.data
                 });
 
             } catch (error) {
@@ -1474,13 +1530,32 @@ app.get('/', async (c) => {
                         '</div>' +
                     '</div>' +
                     
+                    (data.videoAssembly ? 
+                        '<div>' +
+                            '<h5 class="font-medium text-gray-900 mb-2">🎬 Video Assembly</h5>' +
+                            '<div class="bg-white rounded p-3 border text-sm">' +
+                                '<strong>Status:</strong> ' + (data.videoAssembly.assemblyJob?.status || 'Queued') + '<br>' +
+                                '<strong>Scenes:</strong> ' + (data.videoAssembly.summary?.sceneCount || 0) + '<br>' +
+                                '<strong>Duration:</strong> ' + (data.videoAssembly.summary?.estimatedDuration || 0) + 's<br>' +
+                                '<strong>Resolution:</strong> ' + (data.videoAssembly.summary?.resolution || '1080p') + '<br>' +
+                                '<strong>Job ID:</strong> ' + (data.videoAssembly.summary?.jobId || 'N/A') +
+                            '</div>' +
+                        '</div>' 
+                        : '') +
+                    
                     '<div class="text-center pt-4">' +
                         '<button onclick="resetVideoGeneration()" class="bg-gray-500 text-white px-4 py-2 rounded mr-2 hover:bg-gray-600">' +
                             '🔄 Generate Another' +
                         '</button>' +
-                        '<button onclick="alert(\\'Video download would be implemented here\\')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">' +
-                            '📥 Download Video (Coming Soon)' +
-                        '</button>' +
+                        (data.videoAssembly ? 
+                            '<button onclick="downloadVideo(' + "'" + (data.videoAssembly.summary?.jobId || '') + "'" + ')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">' +
+                                '📥 Download Video' +
+                            '</button>'
+                            :
+                            '<button onclick="alert(' + "'" + 'Video assembly not completed' + "'" + ')" class="bg-gray-400 text-white px-4 py-2 rounded cursor-not-allowed">' +
+                                '📥 Download Not Available' +
+                            '</button>'
+                        ) +
                     '</div>' +
                 '</div>';
 
@@ -1504,6 +1579,68 @@ app.get('/', async (c) => {
             
             // Reset progress bar
             document.getElementById('progressBar').style.width = '0%';
+        }
+
+        async function downloadVideo(jobId) {
+            if (!jobId) {
+                alert('No video job ID available for download');
+                return;
+            }
+
+            try {
+                // Check video progress first
+                const progressResponse = await fetch(API_BASE + '/api/video/progress/' + jobId, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + PASSWORD
+                    }
+                });
+
+                if (!progressResponse.ok) {
+                    throw new Error('Failed to check video progress');
+                }
+
+                const progressResult = await progressResponse.json();
+
+                if (progressResult.data.progress.progress < 1.0) {
+                    alert('Video is still processing. Progress: ' + Math.round(progressResult.data.progress.progress * 100) + '%');
+                    return;
+                }
+
+                // Get download URL
+                const downloadResponse = await fetch(API_BASE + '/api/video/download/' + jobId, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + PASSWORD
+                    }
+                });
+
+                if (!downloadResponse.ok) {
+                    throw new Error('Failed to get download URL');
+                }
+
+                const downloadResult = await downloadResponse.json();
+
+                if (downloadResult.success && downloadResult.data.download.downloadUrl) {
+                    // Create temporary link and trigger download
+                    const link = document.createElement('a');
+                    link.href = downloadResult.data.download.downloadUrl;
+                    link.download = 'aidobe-video-' + jobId + '.mp4';
+                    link.target = '_blank';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    alert('Download started! File size: ' + downloadResult.data.summary.fileSize);
+                } else {
+                    alert('Download URL not available. Video may still be processing.');
+                }
+
+            } catch (error) {
+                console.error('Download failed:', error);
+                alert('Failed to download video: ' + error.message);
+            }
         }
     </script>
 </body>

@@ -11,6 +11,7 @@ import { mediaRoutes } from './handlers/media'
 import { createScriptRoutes } from './handlers/scripts'
 import { createAssetRoutes } from './handlers/assets'
 import { createAudioRoutes } from './handlers/audio'
+import { createJobRoutes } from './handlers/jobs'
 import type { Env } from './types/env'
 
 const app = new Hono<{ Bindings: Env }>()
@@ -1119,10 +1120,42 @@ app.get('/', async (c) => {
                 generateVideoBtn.disabled = true;
                 generateVideoBtn.textContent = '🎬 Generating...';
 
-                const jobId = crypto.randomUUID();
+                // Step 0: Create Job
+                const jobData = {
+                    type: 'video_generation',
+                    priority: 'high',
+                    metadata: {
+                        userId: 'anonymous',
+                        estimatedDuration: 300, // 5 minutes estimate
+                        steps: [
+                            { name: 'parse_articles' },
+                            { name: 'generate_script' },
+                            { name: 'generate_audio' },
+                            { name: 'discover_assets' },
+                            { name: 'select_music' },
+                            { name: 'assemble_video' }
+                        ]
+                    }
+                };
+
+                const jobResponse = await fetch(API_BASE + '/api/jobs/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify(jobData)
+                });
+
+                if (!jobResponse.ok) {
+                    throw new Error('Failed to create job');
+                }
+
+                const jobResult = await jobResponse.json();
+                const jobId = jobResult.data.id;
 
                 // Step 1: Parse Articles
-                await updateVideoStep(1, 'processing', 16.67);
+                await updateVideoStep(1, 'processing', 16.67, jobId, 'parse_articles');
                 const articleData = {
                     articles: [{
                         id: crypto.randomUUID(),
@@ -1148,10 +1181,10 @@ app.get('/', async (c) => {
                 }
 
                 const parseResult = await parseResponse.json();
-                await updateVideoStep(1, 'completed', 16.67);
+                await updateVideoStep(1, 'completed', 16.67, jobId, 'parse_articles');
 
                 // Step 2: Generate Script
-                await updateVideoStep(2, 'processing', 33.33);
+                await updateVideoStep(2, 'processing', 33.33, jobId, 'generate_script');
                 const scriptData = {
                     jobId: jobId,
                     articleIds: [articleData.articles[0].id],
@@ -1186,10 +1219,10 @@ app.get('/', async (c) => {
 
                 const scriptResult = await scriptResponse.json();
                 const script = scriptResult.data.scripts[0];
-                await updateVideoStep(2, 'completed', 33.33);
+                await updateVideoStep(2, 'completed', 33.33, jobId, 'generate_script');
 
                 // Step 3: Generate TTS Audio
-                await updateVideoStep(3, 'processing', 50);
+                await updateVideoStep(3, 'processing', 50, jobId, 'generate_audio');
                 const ttsData = {
                     jobId: jobId,
                     scriptId: script.id,
@@ -1221,10 +1254,10 @@ app.get('/', async (c) => {
                 }
 
                 const ttsResult = await ttsResponse.json();
-                await updateVideoStep(3, 'completed', 50);
+                await updateVideoStep(3, 'completed', 50, jobId, 'generate_audio');
 
                 // Step 4: Search Assets
-                await updateVideoStep(4, 'processing', 66.67);
+                await updateVideoStep(4, 'processing', 66.67, jobId, 'discover_assets');
                 const assetData = {
                     query: script.visualDirection || articleTitle,
                     type: 'image',
@@ -1254,10 +1287,10 @@ app.get('/', async (c) => {
                 }
 
                 const assetResult = await assetResponse.json();
-                await updateVideoStep(4, 'completed', 66.67);
+                await updateVideoStep(4, 'completed', 66.67, jobId, 'discover_assets');
 
                 // Step 5: Select Music
-                await updateVideoStep(5, 'processing', 83.33);
+                await updateVideoStep(5, 'processing', 83.33, jobId, 'select_music');
                 const musicData = {
                     jobId: jobId,
                     mood: document.getElementById('musicMood').value,
@@ -1280,15 +1313,34 @@ app.get('/', async (c) => {
                 }
 
                 const musicResult = await musicResponse.json();
-                await updateVideoStep(5, 'completed', 83.33);
+                await updateVideoStep(5, 'completed', 83.33, jobId, 'select_music');
 
                 // Step 6: Assemble Video (Mock)
-                await updateVideoStep(6, 'processing', 100);
+                await updateVideoStep(6, 'processing', 100, jobId, 'assemble_video');
                 
                 // For now, we'll just show success with the data we collected
                 await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate assembly
                 
-                await updateVideoStep(6, 'completed', 100);
+                await updateVideoStep(6, 'completed', 100, jobId, 'assemble_video');
+
+                // Mark job as completed
+                await fetch(API_BASE + '/api/jobs/' + jobId, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify({
+                        status: 'completed',
+                        progress: 100,
+                        result: {
+                            script: script,
+                            audio: ttsResult.data,
+                            assets: assetResult.data.assets,
+                            music: musicResult.data.musicSelections
+                        }
+                    })
+                });
 
                 // Show results
                 showVideoResults({
@@ -1300,12 +1352,52 @@ app.get('/', async (c) => {
 
             } catch (error) {
                 console.error('Video generation error:', error);
+                
+                // Mark job as failed if jobId exists
+                if (typeof jobId !== 'undefined') {
+                    try {
+                        await fetch(API_BASE + '/api/jobs/' + jobId, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer ' + PASSWORD
+                            },
+                            body: JSON.stringify({
+                                status: 'failed',
+                                error: error.message
+                            })
+                        });
+                    } catch (updateError) {
+                        console.warn('Failed to update job status:', updateError);
+                    }
+                }
+                
                 alert('Video generation failed: ' + error.message);
                 resetVideoGeneration();
             }
         }
 
-        async function updateVideoStep(stepNumber, status, progressPercent) {
+        async function updateJobProgress(jobId, currentStep, stepProgress, overallProgress) {
+            try {
+                await fetch(API_BASE + '/api/jobs/' + jobId, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + PASSWORD
+                    },
+                    body: JSON.stringify({
+                        status: 'processing',
+                        progress: overallProgress,
+                        currentStep: currentStep,
+                        stepProgress: stepProgress
+                    })
+                });
+            } catch (error) {
+                console.warn('Failed to update job progress:', error);
+            }
+        }
+
+        async function updateVideoStep(stepNumber, status, progressPercent, jobId, stepName) {
             const stepElement = document.getElementById('step' + stepNumber + 'Status');
             const progressBar = document.getElementById('progressBar');
             
@@ -1321,6 +1413,11 @@ app.get('/', async (c) => {
             }
 
             progressBar.style.width = progressPercent + '%';
+            
+            // Update job progress if provided
+            if (jobId && stepName) {
+                await updateJobProgress(jobId, stepName, status === 'completed' ? 100 : 50, progressPercent);
+            }
             
             // Small delay for visual effect
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -1427,7 +1524,7 @@ app.all('/api/scripts/*', async (c) => {
   const scriptRoutes = createScriptRoutes(c.env)
   const path = c.req.path.replace('/api/scripts', '')
   const newRequest = new Request(c.req.url.replace('/api/scripts', ''), c.req.raw)
-  
+
   // Create a new context for the sub-app
   const response = await scriptRoutes.fetch(newRequest, c.env)
   return response
@@ -1437,7 +1534,7 @@ app.all('/api/assets/*', async (c) => {
   const assetRoutes = createAssetRoutes(c.env)
   const path = c.req.path.replace('/api/assets', '')
   const newRequest = new Request(c.req.url.replace('/api/assets', ''), c.req.raw)
-  
+
   const response = await assetRoutes.fetch(newRequest, c.env)
   return response
 })
@@ -1446,8 +1543,17 @@ app.all('/api/audio/*', async (c) => {
   const audioRoutes = createAudioRoutes(c.env)
   const path = c.req.path.replace('/api/audio', '')
   const newRequest = new Request(c.req.url.replace('/api/audio', ''), c.req.raw)
-  
+
   const response = await audioRoutes.fetch(newRequest, c.env)
+  return response
+})
+
+app.all('/api/jobs/*', async (c) => {
+  const jobRoutes = createJobRoutes(c.env)
+  const path = c.req.path.replace('/api/jobs', '')
+  const newRequest = new Request(c.req.url.replace('/api/jobs', ''), c.req.raw)
+
+  const response = await jobRoutes.fetch(newRequest, c.env)
   return response
 })
 

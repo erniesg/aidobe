@@ -41,6 +41,19 @@ CREATE TABLE IF NOT EXISTS analytics (
   metadata TEXT -- JSON string
 );
 
+-- Jobs table for managing long-running tasks
+CREATE TABLE IF NOT EXISTS jobs (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL, -- video_generation, script_generation, asset_discovery, audio_processing
+  status TEXT NOT NULL DEFAULT 'pending', -- pending, processing, completed, failed, cancelled
+  progress INTEGER NOT NULL DEFAULT 0, -- 0-100
+  result TEXT, -- JSON string for job result
+  error TEXT, -- Error message if failed
+  metadata TEXT NOT NULL, -- JSON string for job metadata (steps, userId, priority, etc.)
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_prompts_created_at ON prompts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_prompts_status ON prompts(status);
@@ -48,3 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_outputs_prompt_id ON outputs(prompt_id);
 CREATE INDEX IF NOT EXISTS idx_outputs_type ON outputs(type);
 CREATE INDEX IF NOT EXISTS idx_analytics_timestamp ON analytics(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_analytics_event_type ON analytics(event_type);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_type ON jobs(type);
+CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(JSON_EXTRACT(metadata, '$.userId'));

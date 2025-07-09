@@ -15,7 +15,7 @@ const mockEnv: Env = {
   ACCESS_PASSWORD: 'test-password',
   OPENAI_API_KEY: 'test-openai-key',
   REPLICATE_API_TOKEN: 'test-replicate-token',
-  ENVIRONMENT: 'test'
+  ENVIRONMENT: 'test',
 }
 
 // Mock fetch globally
@@ -44,7 +44,7 @@ describe('ArgilAvatarService', () => {
         { word: 'script', startTime: 2.5, endTime: 3.0 },
         { word: 'for', startTime: 3.0, endTime: 3.2 },
         { word: 'avatar', startTime: 3.2, endTime: 3.8 },
-        { word: 'generation', startTime: 3.8, endTime: 4.5 }
+        { word: 'generation', startTime: 3.8, endTime: 4.5 },
       ]
 
       // Mock Argil API response for creating video
@@ -61,10 +61,10 @@ describe('ArgilAvatarService', () => {
               transcript: script,
               avatarId: 'avatar-1',
               voiceId: 'voice-1',
-              gestureSlug: 'friendly'
-            }
-          ]
-        })
+              gestureSlug: 'friendly',
+            },
+          ],
+        }),
       })
 
       const result = await service.generateFromScript({
@@ -73,7 +73,7 @@ describe('ArgilAvatarService', () => {
         avatarId: 'avatar-1',
         voiceId: 'voice-1',
         gestureSlug: 'friendly',
-        videoName: 'Test Video'
+        videoName: 'Test Video',
       })
 
       expect(result.success).toBe(true)
@@ -84,11 +84,14 @@ describe('ArgilAvatarService', () => {
     })
 
     it('should handle long scripts by automatically splitting them into moments', async () => {
-      const longScript = 'a'.repeat(500) // 500 characters, exceeds 250 limit
-      const wordTimings: WordTiming[] = Array.from({ length: 10 }, (_, i) => ({
-        word: `word${i}`,
-        startTime: i * 0.5,
-        endTime: (i + 1) * 0.5
+      // Create a script with multiple words that exceeds 250 characters
+      const words = Array.from({ length: 50 }, (_, i) => `word${i}`).join(' ')
+      const longScript = words + ' ' + words // About 500 characters
+
+      const wordTimings: WordTiming[] = Array.from({ length: 100 }, (_, i) => ({
+        word: `word${i % 50}`,
+        startTime: i * 0.1,
+        endTime: (i + 1) * 0.1,
       }))
 
       mockFetch.mockResolvedValueOnce({
@@ -101,15 +104,15 @@ describe('ArgilAvatarService', () => {
           updatedAt: '2023-01-01T00:00:00Z',
           moments: [
             { transcript: 'a'.repeat(250), avatarId: 'avatar-1' },
-            { transcript: 'a'.repeat(250), avatarId: 'avatar-1' }
-          ]
-        })
+            { transcript: 'a'.repeat(250), avatarId: 'avatar-1' },
+          ],
+        }),
       })
 
       const result = await service.generateFromScript({
         script: longScript,
         wordTimings,
-        avatarId: 'avatar-1'
+        avatarId: 'avatar-1',
       })
 
       expect(result.success).toBe(true)
@@ -122,7 +125,7 @@ describe('ArgilAvatarService', () => {
       const result = await service.generateFromScript({
         script: 'test',
         wordTimings: [],
-        avatarId: 'non-existent-avatar'
+        avatarId: 'non-existent-avatar',
       })
 
       expect(result.success).toBe(false)
@@ -130,18 +133,34 @@ describe('ArgilAvatarService', () => {
     })
 
     it('should handle API errors gracefully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 429,
-        json: async () => ({
-          error: 'Rate limit exceeded'
+      // Mock all retry attempts to fail with rate limit error
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          json: async () => ({
+            error: 'Rate limit exceeded',
+          }),
         })
-      })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          json: async () => ({
+            error: 'Rate limit exceeded',
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          json: async () => ({
+            error: 'Rate limit exceeded',
+          }),
+        })
 
       const result = await service.generateFromScript({
         script: 'test',
         wordTimings: [{ word: 'test', startTime: 0, endTime: 1 }],
-        avatarId: 'avatar-1'
+        avatarId: 'avatar-1',
       })
 
       expect(result.success).toBe(false)
@@ -167,10 +186,10 @@ describe('ArgilAvatarService', () => {
             {
               transcript,
               avatarId: 'avatar-1',
-              voiceId: 'voice-1'
-            }
-          ]
-        })
+              voiceId: 'voice-1',
+            },
+          ],
+        }),
       })
 
       const result = await service.generateFromAudioSegment({
@@ -178,7 +197,7 @@ describe('ArgilAvatarService', () => {
         transcript,
         timing,
         avatarId: 'avatar-1',
-        voiceId: 'voice-1'
+        voiceId: 'voice-1',
       })
 
       expect(result.success).toBe(true)
@@ -189,12 +208,12 @@ describe('ArgilAvatarService', () => {
 
     it('should handle transcript longer than 250 characters', async () => {
       const longTranscript = 'a'.repeat(300)
-      
+
       const result = await service.generateFromAudioSegment({
         audioUrl: 'https://example.com/audio.mp3',
         transcript: longTranscript,
         timing: { startTime: 0, endTime: 10 },
-        avatarId: 'avatar-1'
+        avatarId: 'avatar-1',
       })
 
       expect(result.success).toBe(false)
@@ -215,8 +234,8 @@ describe('ArgilAvatarService', () => {
           createdAt: '2023-01-01T00:00:00Z',
           updatedAt: '2023-01-01T00:01:00Z',
           videoUrl: 'https://argil.com/video.mp4',
-          moments: []
-        })
+          moments: [],
+        }),
       })
 
       const result = await service.getVideoStatus(videoId)
@@ -231,8 +250,8 @@ describe('ArgilAvatarService', () => {
         ok: false,
         status: 404,
         json: async () => ({
-          error: 'Video not found'
-        })
+          error: 'Video not found',
+        }),
       })
 
       const result = await service.getVideoStatus('non-existent-video')
@@ -254,8 +273,8 @@ describe('ArgilAvatarService', () => {
           status: 'GENERATING_AUDIO',
           createdAt: '2023-01-01T00:00:00Z',
           updatedAt: '2023-01-01T00:01:00Z',
-          moments: []
-        })
+          moments: [],
+        }),
       })
 
       const result = await service.renderVideo(videoId)
@@ -269,8 +288,8 @@ describe('ArgilAvatarService', () => {
         ok: false,
         status: 400,
         json: async () => ({
-          error: 'Cannot render video in current state'
-        })
+          error: 'Cannot render video in current state',
+        }),
       })
 
       const result = await service.renderVideo('video-123')
@@ -331,7 +350,7 @@ describe('ArgilAvatarService', () => {
       const webhookPayload = {
         video_id: 'video-123',
         status: 'DONE',
-        event: 'VIDEO_GENERATION_SUCCESS'
+        event: 'VIDEO_GENERATION_SUCCESS',
       }
 
       const result = await service.webhookHandler(webhookPayload, 'valid-signature')
@@ -344,7 +363,7 @@ describe('ArgilAvatarService', () => {
     it('should validate webhook signature', async () => {
       const webhookPayload = {
         video_id: 'video-123',
-        status: 'DONE'
+        status: 'DONE',
       }
 
       const result = await service.webhookHandler(webhookPayload, 'invalid-signature')
@@ -361,7 +380,7 @@ describe('ArgilAvatarService', () => {
         .mockResolvedValueOnce({
           ok: false,
           status: 429,
-          json: async () => ({ error: 'Rate limit exceeded' })
+          json: async () => ({ error: 'Rate limit exceeded' }),
         })
         .mockResolvedValueOnce({
           ok: true,
@@ -371,14 +390,14 @@ describe('ArgilAvatarService', () => {
             status: 'IDLE',
             createdAt: '2023-01-01T00:00:00Z',
             updatedAt: '2023-01-01T00:00:00Z',
-            moments: []
-          })
+            moments: [],
+          }),
         })
 
       const result = await service.generateFromScript({
         script: 'test',
         wordTimings: [{ word: 'test', startTime: 0, endTime: 1 }],
-        avatarId: 'avatar-1'
+        avatarId: 'avatar-1',
       })
 
       expect(result.success).toBe(true)
@@ -391,7 +410,7 @@ describe('ArgilAvatarService', () => {
       const result = await service.generateFromScript({
         script: 'test',
         wordTimings: [{ word: 'test', startTime: 0, endTime: 1 }],
-        avatarId: 'avatar-1'
+        avatarId: 'avatar-1',
       })
 
       expect(result.success).toBe(false)
@@ -423,10 +442,28 @@ describe('ArgilAvatarService', () => {
     })
 
     it('should track API usage metrics', async () => {
+      // Mock successful API response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'video-metrics-123',
+          name: 'Test Video',
+          status: 'IDLE',
+          createdAt: '2023-01-01T00:00:00Z',
+          updatedAt: '2023-01-01T00:00:00Z',
+          moments: [
+            {
+              transcript: 'test',
+              avatarId: 'avatar-1',
+            },
+          ],
+        }),
+      })
+
       await service.generateFromScript({
         script: 'test',
         wordTimings: [{ word: 'test', startTime: 0, endTime: 1 }],
-        avatarId: 'avatar-1'
+        avatarId: 'avatar-1',
       })
 
       const metrics = await service.getUsageMetrics()
@@ -445,10 +482,10 @@ describe('ArgilAvatarService', () => {
             transcript: 'Hello world',
             avatarId: 'avatar-1',
             voiceId: 'voice-1',
-            gestureSlug: 'friendly'
-          }
+            gestureSlug: 'friendly',
+          },
         ],
-        aspectRatio: '16:9' as const
+        aspectRatio: '16:9' as const,
       }
 
       mockFetch.mockResolvedValueOnce({
@@ -459,8 +496,8 @@ describe('ArgilAvatarService', () => {
           status: 'IDLE',
           createdAt: '2023-01-01T00:00:00Z',
           updatedAt: '2023-01-01T00:00:00Z',
-          moments: videoRequest.moments
-        })
+          moments: videoRequest.moments,
+        }),
       })
 
       const result = await service.createVideo(videoRequest)

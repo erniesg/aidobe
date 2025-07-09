@@ -33,6 +33,8 @@ const mockEnv: Env = {
   ACCESS_PASSWORD: 'test-password',
   OPENAI_API_KEY: 'test-openai-key',
   REPLICATE_API_TOKEN: 'test-replicate-token',
+  ARGIL_API_KEY: 'test-argil-key',
+  ARGIL_WEBHOOK_SECRET: 'test-webhook-secret',
   R2_OUTPUTS: {} as any,
   R2_PROMPTS: {} as any,
   DB: {} as any,

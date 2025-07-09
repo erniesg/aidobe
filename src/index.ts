@@ -124,7 +124,15 @@ app.get('/', async (c) => {
                 </button>
             </div>
             <h1 class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">aidobe</h1>
-            <p class="text-gray-600">AI-Powered Multimodal Generation</p>
+            <p class="text-gray-600">AI-Powered Content Generation Platform</p>
+            <div class="mt-4 space-x-4">
+                <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    📸 Images (Current)
+                </button>
+                <a href="/video" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors inline-block">
+                    🎬 Video Generation
+                </a>
+            </div>
         </div>
 
         <!-- Main Generation Interface -->
@@ -1695,5 +1703,125 @@ app.all('/api/jobs/*', async (c) => {
 })
 
 app.route('/media', mediaRoutes)
+
+// Video generation UI
+app.get('/video', async (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>aidobe - AI Video Generation</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            .card-shadow { box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+            .step { display: none; }
+            .step.active { display: block; }
+        </style>
+    </head>
+    <body class="bg-gray-50 min-h-screen">
+        <div class="container mx-auto px-4 py-8 max-w-4xl">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">aidobe</h1>
+                <p class="text-gray-600">AI-Powered Video Generation</p>
+                <div class="mt-4">
+                    <a href="/" class="text-blue-600 hover:text-blue-800">← Back to Image Generation</a>
+                </div>
+            </div>
+
+            <!-- Video Generation Coming Soon -->
+            <div class="bg-white rounded-lg card-shadow p-8 text-center">
+                <div class="text-6xl mb-6">🎬</div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Video Generation Pipeline</h2>
+                <p class="text-gray-600 mb-6">Complete workflow for creating AI-generated videos from scripts</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    <div class="p-4 border border-gray-200 rounded-lg">
+                        <div class="text-2xl mb-2">📝</div>
+                        <h3 class="font-medium text-gray-900">Script Generation</h3>
+                        <p class="text-sm text-gray-600">From articles, topics, or manual input</p>
+                    </div>
+                    <div class="p-4 border border-gray-200 rounded-lg">
+                        <div class="text-2xl mb-2">🎨</div>
+                        <h3 class="font-medium text-gray-900">Asset Discovery</h3>
+                        <p class="text-sm text-gray-600">Find and select visual assets</p>
+                    </div>
+                    <div class="p-4 border border-gray-200 rounded-lg">
+                        <div class="text-2xl mb-2">🎵</div>
+                        <h3 class="font-medium text-gray-900">Audio Generation</h3>
+                        <p class="text-sm text-gray-600">TTS and background music</p>
+                    </div>
+                    <div class="p-4 border border-gray-200 rounded-lg">
+                        <div class="text-2xl mb-2">🎬</div>
+                        <h3 class="font-medium text-gray-900">Video Assembly</h3>
+                        <p class="text-sm text-gray-600">Combine assets with timing</p>
+                    </div>
+                    <div class="p-4 border border-gray-200 rounded-lg">
+                        <div class="text-2xl mb-2">✨</div>
+                        <h3 class="font-medium text-gray-900">Effects & Captions</h3>
+                        <p class="text-sm text-gray-600">Ken Burns, transitions, overlays</p>
+                    </div>
+                    <div class="p-4 border border-gray-200 rounded-lg">
+                        <div class="text-2xl mb-2">📥</div>
+                        <h3 class="font-medium text-gray-900">Export & Download</h3>
+                        <p class="text-sm text-gray-600">Ready for TikTok, Instagram, YouTube</p>
+                    </div>
+                </div>
+
+                <!-- API Testing -->
+                <div class="bg-blue-50 rounded-lg p-6 mb-6">
+                    <h3 class="font-medium text-gray-900 mb-4">🔧 Developer Testing</h3>
+                    <p class="text-sm text-gray-600 mb-4">The video generation API is ready! Test individual endpoints:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div class="text-left">
+                            <strong>Script Generation:</strong><br>
+                            <code class="bg-gray-100 px-2 py-1 rounded">POST /api/scripts/generate</code>
+                        </div>
+                        <div class="text-left">
+                            <strong>Asset Discovery:</strong><br>
+                            <code class="bg-gray-100 px-2 py-1 rounded">POST /api/assets/search</code>
+                        </div>
+                        <div class="text-left">
+                            <strong>Audio Generation:</strong><br>
+                            <code class="bg-gray-100 px-2 py-1 rounded">POST /api/audio/generate</code>
+                        </div>
+                        <div class="text-left">
+                            <strong>Video Assembly:</strong><br>
+                            <code class="bg-gray-100 px-2 py-1 rounded">POST /api/video/assemble</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="bg-yellow-50 rounded-lg p-6">
+                    <h3 class="font-medium text-gray-900 mb-2">🚧 Current Status</h3>
+                    <div class="text-sm text-left space-y-1">
+                        <div class="flex items-center">
+                            <span class="text-green-600 mr-2">✅</span>
+                            <span>All API endpoints implemented</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-green-600 mr-2">✅</span>
+                            <span>Modal.com video processing pipeline built</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-yellow-600 mr-2">⏳</span>
+                            <span>Modal deployment pending</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-yellow-600 mr-2">⏳</span>
+                            <span>Full UI workflow in progress</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+  `)
+})
 
 export default app

@@ -6,5 +6,7 @@ export interface Env {
   ACCESS_PASSWORD: string
   OPENAI_API_KEY: string
   REPLICATE_API_TOKEN: string
+  ARGIL_API_KEY: string
+  ARGIL_WEBHOOK_SECRET: string
   ENVIRONMENT: string
 }

@@ -2,16 +2,17 @@
 
 ## Project Overview
 
-Aidobe is a modern, atomized video generation pipeline built on Cloudflare Workers that transforms articles into TikTok-ready videos through a flexible, human-in-the-loop workflow. The system provides atomic API endpoints that can be orchestrated by external services (gimme_ai) while offering a comprehensive frontend for human intervention at every stage.
+Aidobe is a sophisticated, atomized video generation pipeline built on Cloudflare Workers that supports flexible workflow-based video creation with avatar integration. As a modern evolution of the wanx platform, it provides atomic API endpoints that can be orchestrated by external services while supporting multiple video generation workflows including Argil avatar generation, multi-source asset orchestration, and professional video composition.
 
 ## System Architecture
 
 ### Core Principles
-- **Atomic Operations**: Each API endpoint performs one specific operation
-- **Human-in-the-Loop**: Users can edit, override, and regenerate at any stage
-- **Runtime Configuration**: Models and prompts configurable without deployment
-- **CF-Native First**: Maximize Cloudflare Workers capabilities
-- **MCP Support**: All operations exposed via Model Context Protocol
+- **Atomic Operations**: Each API endpoint performs one specific operation and is idempotent
+- **Workflow Flexibility**: Support for Original, Argil Avatar, and Custom workflows
+- **Resumable Processing**: Jobs can be paused and resumed at any stage (inherent REGEN capability)
+- **Configuration-Driven**: Runtime configurable prompts, workflows, and generation parameters
+- **Multi-Source Integration**: Seamless integration with Argil, ElevenLabs, Pexels, Pixabay, Envato
+- **CF-Native First**: Maximize Cloudflare Workers capabilities with Modal for heavy processing
 
 ### Technology Stack
 - **Runtime**: Cloudflare Workers (TypeScript)
@@ -20,7 +21,12 @@ Aidobe is a modern, atomized video generation pipeline built on Cloudflare Worke
 - **Storage**: Cloudflare R2 (assets), D1 (metadata), KV (configuration)
 - **Frontend**: React + TypeScript + Tailwind CSS
 - **Testing**: Vitest with CF Workers integration
-- **Heavy Processing**: Modal for Python-only operations (video assembly)
+- **Heavy Processing**: Modal for video assembly, effects, and composition
+- **Avatar Generation**: Argil API with gesture management and transcript splitting
+- **Text-to-Speech**: ElevenLabs with word-level timing
+- **Asset Sources**: Pexels, Pixabay, Envato, SERP API, AI image generation
+- **Video Effects**: Ken Burns, text overlays, 3D effects via FFmpeg/MoviePy
+- **Prompt Templates**: Jinja2 templating for dynamic prompt generation
 
 ## Project Structure
 

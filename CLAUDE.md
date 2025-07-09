@@ -4,15 +4,16 @@ This file provides guidance to Claude Code when working with the aidobe codebase
 
 ## Project Overview
 
-aidobe is a next-generation AI-powered image and video generation platform built on Cloudflare Workers. It serves as a clean, modern evolution of the wanx video generation platform, focusing on prompt experimentation, multi-provider AI integration, and production-ready media generation.
+aidobe is a sophisticated AI-powered video generation platform built on Cloudflare Workers. It serves as a clean, modern evolution of the wanx video generation platform, focusing on flexible workflow-based video creation with avatar integration, multi-source asset orchestration, and production-ready media generation.
 
 ## Core Mission
 
-- **Prompt Experimentation Hub**: Easy testing and iteration of AI prompts across multiple providers
-- **Multi-Provider AI Integration**: Seamless switching between OpenAI, Replicate, and other AI services
-- **Production-Ready Media Generation**: High-quality image and video output with advanced effects
-- **Edge Computing Performance**: Global distribution via Cloudflare Workers for minimal latency
-- **Comprehensive Analytics**: Deep insights into prompt performance, provider reliability, and usage patterns
+- **Flexible Workflow Video Generation**: Support for multiple video creation workflows (Original, Argil Avatar, Custom)
+- **Avatar Integration**: Seamless Argil avatar generation with lip-sync, gesture management, and transcript splitting
+- **Multi-Source Asset Orchestration**: Intelligent asset discovery and selection from Pexels, Pixabay, Envato, and AI generation
+- **Atomic & Idempotent Operations**: Each endpoint performs one operation and can be resumed/recovered (inherent REGEN capability)
+- **Configuration-Driven**: Runtime configurable prompts, workflows, and generation parameters with Jinja2 templating
+- **Production-Ready at Scale**: High-quality video output with advanced effects, Ken Burns, and professional composition
 
 ## Architecture Philosophy
 
@@ -51,8 +52,10 @@ aidobe is a next-generation AI-powered image and video generation platform built
 - **Validation**: Zod for schema validation and type generation
 - **Testing**: Vitest for unit/integration tests
 - **Storage**: Cloudflare R2 (S3-compatible) + D1 (SQLite)
-- **AI Providers**: OpenAI DALL-E, Replicate, Stability AI
-- **Media Processing**: FFmpeg (via Replicate), ImageMagick
+- **AI Providers**: OpenAI DALL-E, Replicate, Stability AI, Argil (avatars), ElevenLabs (TTS)
+- **Media Processing**: FFmpeg (via Modal), MoviePy, ImageMagick, Ken Burns effects
+- **Asset Sources**: Pexels, Pixabay, Envato, SERP API, AI image generation
+- **Video Processing**: Modal.com for heavy video assembly and effects processing
 
 **Development Tools:**
 - **Package Manager**: npm with lockfile versioning
@@ -68,22 +71,45 @@ aidobe/
 │   ├── handlers/          # HTTP route handlers
 │   │   ├── image.ts       # Image generation endpoints
 │   │   ├── video.ts       # Video generation endpoints
-│   │   ├── prompt.ts      # Prompt management and testing
+│   │   ├── scripts.ts     # Script generation and management
+│   │   ├── assets.ts      # Asset orchestration and management
+│   │   ├── audio.ts       # Audio processing and TTS
+│   │   ├── avatars.ts     # Avatar generation (Argil)
+│   │   ├── workflows.ts   # Workflow configuration and execution
+│   │   ├── prompt.ts      # Prompt template management
 │   │   ├── download.ts    # Media download and export
-│   │   └── analytics.ts   # Usage analytics and reporting
+│   │   └── jobs.ts        # Job management and tracking
 │   ├── services/          # Business logic layer
 │   │   ├── ai/           # AI provider integrations
 │   │   │   ├── base.ts    # Abstract base AI provider
-│   │   │   ├── openai.ts  # OpenAI DALL-E integration
+│   │   │   ├── openai.ts  # OpenAI integration
 │   │   │   ├── replicate.ts # Replicate API integration
-│   │   │   └── stability.ts # Stability AI integration
+│   │   │   ├── stability.ts # Stability AI integration
+│   │   │   ├── argil.ts   # Argil avatar integration
+│   │   │   └── elevenlabs.ts # ElevenLabs TTS integration
 │   │   ├── media/        # Media processing services
 │   │   │   ├── effects.ts # Video effects (Ken Burns, overlays)
-│   │   │   ├── enhancer.ts # Image/video enhancement
-│   │   │   └── assembler.ts # Video composition and assembly
+│   │   │   ├── composition.ts # Video composition and assembly
+│   │   │   └── transcription.ts # Audio transcription and timing
+│   │   ├── assets/       # Asset orchestration services
+│   │   │   ├── orchestrator.ts # Multi-source asset coordination
+│   │   │   ├── pexels.ts  # Pexels API integration
+│   │   │   ├── pixabay.ts # Pixabay API integration
+│   │   │   └── envato.ts  # Envato API integration
+│   │   ├── workflows/    # Workflow management
+│   │   │   ├── original.ts # Original workflow (script → TTS → video)
+│   │   │   ├── argil.ts   # Argil avatar workflow
+│   │   │   └── manager.ts # Workflow orchestration
 │   │   ├── storage.ts    # R2 storage operations
 │   │   ├── database.ts   # D1 database operations
 │   │   └── cache.ts      # Caching layer for performance
+│   ├── utils/            # Utility functions
+│   │   ├── transcript-splitter.ts # Transcript splitting for avatars
+│   │   ├── audio-segmentation.ts # Audio segmentation for lip-sync
+│   │   ├── logger.ts     # Structured logging
+│   │   ├── crypto.ts     # Cryptographic utilities
+│   │   ├── validation.ts # Common validation functions
+│   │   └── formatting.ts # Data formatting helpers
 │   ├── middleware/       # Request middleware
 │   │   ├── auth.ts       # Authentication and authorization
 │   │   ├── validation.ts # Request validation
@@ -631,22 +657,28 @@ class Logger {
 - [x] Storage and download functionality
 - [x] Comprehensive testing framework
 
-### Phase 2: Advanced Media Generation
-- [ ] Video generation and effects pipeline
-- [ ] Advanced image enhancement and styling
-- [ ] Multi-step workflow orchestration
-- [ ] Background job processing
+### Phase 2: Avatar Integration (Current Priority)
+- [ ] Argil avatar generation with gesture management
+- [ ] Transcript splitting utility for API limits
+- [ ] Audio segmentation for lip-sync
+- [ ] Enhanced asset orchestration with multi-source support
 
-### Phase 3: Intelligence Features
-- [ ] Prompt optimization and suggestions
-- [ ] Style transfer and consistency
-- [ ] Automated quality assessment
-- [ ] Content categorization and tagging
+### Phase 3: Advanced Video Features
+- [ ] Ken Burns effects and video composition
+- [ ] Text overlays with animations
+- [ ] Professional video effects pipeline
+- [ ] Multi-workflow orchestration system
 
-### Phase 4: Platform Features
-- [ ] Web interface for prompt testing
-- [ ] API marketplace and integrations
-- [ ] Advanced analytics dashboard
+### Phase 4: Configuration & Flexibility
+- [ ] Configurable prompt templates with Jinja2
+- [ ] Workflow template management
+- [ ] Runtime configuration updates
+- [ ] Advanced job tracking and recovery
+
+### Phase 5: Production Features
+- [ ] Comprehensive testing framework
+- [ ] Performance optimization and caching
+- [ ] Advanced analytics and monitoring
 - [ ] Multi-tenant architecture
 
 ## Best Practices

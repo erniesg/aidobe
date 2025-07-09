@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>aidobe - AI Video Generation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+        }
+        .step-indicator {
+            opacity: 0.5;
+        }
+        .step-indicator.active {
+            opacity: 1;
+        }
+        .step-indicator.completed {
+            opacity: 1;
+            background-color: #10b981;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">aidobe</h1>
+            <p class="text-gray-600">AI-Powered Video Generation Pipeline</p>
+            <div class="mt-4">
+                <a href="/" class="text-blue-600 hover:text-blue-800">← Back to Image Generation</a>
+            </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        <div class="bg-white rounded-lg card-shadow p-6 mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div id="step1-indicator" class="step-indicator active w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-medium">1</div>
+                    <div class="w-12 h-1 bg-gray-300"></div>
+                    <div id="step2-indicator" class="step-indicator w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium">2</div>
+                    <div class="w-12 h-1 bg-gray-300"></div>
+                    <div id="step3-indicator" class="step-indicator w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium">3</div>
+                    <div class="w-12 h-1 bg-gray-300"></div>
+                    <div id="step4-indicator" class="step-indicator w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium">4</div>
+                    <div class="w-12 h-1 bg-gray-300"></div>
+                    <div id="step5-indicator" class="step-indicator w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-medium">5</div>
+                </div>
+            </div>
+            <div class="flex justify-between mt-2 text-xs text-gray-600">
+                <span>Script</span>
+                <span>Assets</span>
+                <span>Audio</span>
+                <span>Review</span>
+                <span>Generate</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Script Generation -->
+        <div id="step1" class="step active bg-white rounded-lg card-shadow p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Step 1: Generate Script</h2>
+            
+            <div class="space-y-6">
+                <!-- Input Method -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Input Method</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button type="button" class="input-method-btn p-4 border border-gray-300 rounded-lg text-center hover:bg-blue-50 transition-colors" data-method="article">
+                            <div class="text-2xl mb-2">📰</div>
+                            <div class="font-medium">Article URL</div>
+                            <div class="text-sm text-gray-500">Convert article to video script</div>
+                        </button>
+                        <button type="button" class="input-method-btn p-4 border border-gray-300 rounded-lg text-center hover:bg-blue-50 transition-colors" data-method="topic">
+                            <div class="text-2xl mb-2">💡</div>
+                            <div class="font-medium">Topic/Idea</div>
+                            <div class="text-sm text-gray-500">Generate script from topic</div>
+                        </button>
+                        <button type="button" class="input-method-btn p-4 border border-gray-300 rounded-lg text-center hover:bg-blue-50 transition-colors" data-method="manual">
+                            <div class="text-2xl mb-2">✍️</div>
+                            <div class="font-medium">Manual Script</div>
+                            <div class="text-sm text-gray-500">Write your own script</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Article URL Input -->
+                <div id="article-input" class="hidden">
+                    <label for="articleUrl" class="block text-sm font-medium text-gray-700 mb-2">Article URL</label>
+                    <input type="url" id="articleUrl" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="https://example.com/article">
+                </div>
+
+                <!-- Topic Input -->
+                <div id="topic-input" class="hidden">
+                    <label for="topicInput" class="block text-sm font-medium text-gray-700 mb-2">Topic or Idea</label>
+                    <input type="text" id="topicInput" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="e.g., How to make perfect coffee">
+                </div>
+
+                <!-- Manual Script Input -->
+                <div id="manual-input" class="hidden">
+                    <label for="manualScript" class="block text-sm font-medium text-gray-700 mb-2">Your Script</label>
+                    <textarea id="manualScript" rows="6" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="Write your video script here..."></textarea>
+                </div>
+
+                <!-- Video Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="platform" class="block text-sm font-medium text-gray-700 mb-2">Platform</label>
+                        <select id="platform" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="tiktok">TikTok (9:16)</option>
+                            <option value="instagram">Instagram Reels (9:16)</option>
+                            <option value="youtube">YouTube Shorts (9:16)</option>
+                            <option value="youtube-horizontal">YouTube (16:9)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="targetLength" class="block text-sm font-medium text-gray-700 mb-2">Target Length (seconds)</label>
+                        <select id="targetLength" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="15">15 seconds</option>
+                            <option value="30" selected>30 seconds</option>
+                            <option value="60">60 seconds</option>
+                            <option value="90">90 seconds</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="tone" class="block text-sm font-medium text-gray-700 mb-2">Tone</label>
+                        <select id="tone" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="energetic">Energetic</option>
+                            <option value="casual">Casual</option>
+                            <option value="professional">Professional</option>
+                            <option value="educational">Educational</option>
+                            <option value="entertaining">Entertaining</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Generate Script Button -->
+                <button id="generateScript" class="w-full gradient-bg text-white font-medium py-3 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                    Generate Script 🎬
+                </button>
+
+                <!-- Generated Script Preview -->
+                <div id="scriptPreview" class="hidden">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Generated Script</h3>
+                    <div id="scriptContent" class="bg-gray-50 rounded-lg p-4 mb-4"></div>
+                    <button id="continueToAssets" class="gradient-bg text-white font-medium py-2 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                        Continue to Assets →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Asset Discovery -->
+        <div id="step2" class="step bg-white rounded-lg card-shadow p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Step 2: Discover Assets</h2>
+            
+            <div class="space-y-6">
+                <p class="text-gray-600">Finding visual assets for each scene in your script...</p>
+                
+                <div id="assetDiscovery" class="space-y-4">
+                    <!-- Asset discovery will be populated here -->
+                </div>
+
+                <button id="continueToAudio" class="gradient-bg text-white font-medium py-2 px-6 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50" disabled>
+                    Continue to Audio →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Audio Generation -->
+        <div id="step3" class="step bg-white rounded-lg card-shadow p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Step 3: Generate Audio</h2>
+            
+            <div class="space-y-6">
+                <!-- Voice Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Voice</label>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button class="voice-btn p-3 border border-gray-300 rounded-lg text-center hover:bg-blue-50" data-voice="alloy">
+                            🎭 Alloy<br><span class="text-xs text-gray-500">Neutral</span>
+                        </button>
+                        <button class="voice-btn p-3 border border-gray-300 rounded-lg text-center hover:bg-blue-50" data-voice="echo">
+                            🎪 Echo<br><span class="text-xs text-gray-500">Lively</span>
+                        </button>
+                        <button class="voice-btn p-3 border border-gray-300 rounded-lg text-center hover:bg-blue-50" data-voice="fable">
+                            📚 Fable<br><span class="text-xs text-gray-500">Warm</span>
+                        </button>
+                        <button class="voice-btn p-3 border border-gray-300 rounded-lg text-center hover:bg-blue-50" data-voice="nova">
+                            ⭐ Nova<br><span class="text-xs text-gray-500">Energetic</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Background Music -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Background Music</label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <button class="music-btn p-3 border border-gray-300 rounded-lg text-center hover:bg-blue-50" data-music="upbeat">
+                            🎵 Upbeat
+                        </button>
+                        <button class="music-btn p-3 border border-gray-300 rounded-lg text-center hover:bg-blue-50" data-music="chill">
+                            🎶 Chill
+                        </button>
+                        <button class="music-btn p-3 border border-gray-300 rounded-lg text-center hover:bg-blue-50" data-music="none">
+                            🔇 None
+                        </button>
+                    </div>
+                </div>
+
+                <button id="generateAudio" class="w-full gradient-bg text-white font-medium py-3 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                    Generate Audio 🎵
+                </button>
+
+                <div id="audioPreview" class="hidden">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Audio Preview</h3>
+                    <audio id="audioPlayer" controls class="w-full mb-4"></audio>
+                    <button id="continueToReview" class="gradient-bg text-white font-medium py-2 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                        Continue to Review →
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Review & Customize -->
+        <div id="step4" class="step bg-white rounded-lg card-shadow p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Step 4: Review & Customize</h2>
+            
+            <div class="space-y-6">
+                <div id="reviewContent">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Script Review -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-3">Script</h3>
+                            <div id="reviewScript" class="bg-gray-50 rounded-lg p-4 text-sm"></div>
+                        </div>
+                        
+                        <!-- Scene Timeline -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-3">Scene Timeline</h3>
+                            <div id="sceneTimeline" class="space-y-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="continueToGenerate" class="gradient-bg text-white font-medium py-2 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                    Continue to Generate →
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Video Generation -->
+        <div id="step5" class="step bg-white rounded-lg card-shadow p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Step 5: Generate Video</h2>
+            
+            <div class="space-y-6">
+                <!-- Generation Progress -->
+                <div id="generationProgress" class="hidden">
+                    <div class="bg-gray-200 rounded-full h-4 mb-4">
+                        <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div id="progressText" class="text-center text-gray-600">Preparing video generation...</div>
+                </div>
+
+                <!-- Final Video -->
+                <div id="finalVideo" class="hidden text-center">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Your Video is Ready! 🎉</h3>
+                    <video id="videoPlayer" controls class="w-full max-w-md mx-auto rounded-lg shadow-lg mb-4"></video>
+                    <div class="space-x-4">
+                        <button id="downloadVideo" class="gradient-bg text-white font-medium py-2 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                            Download Video 📥
+                        </button>
+                        <button id="createAnother" class="border border-gray-300 text-gray-700 font-medium py-2 px-6 rounded-lg hover:bg-gray-50 transition-colors">
+                            Create Another Video
+                        </button>
+                    </div>
+                </div>
+
+                <button id="startGeneration" class="w-full gradient-bg text-white font-medium py-3 px-6 rounded-lg hover:opacity-90 transition-opacity">
+                    Start Video Generation 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading States -->
+        <div id="loadingState" class="hidden bg-white rounded-lg card-shadow p-6 text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div id="loadingText" class="text-gray-600">Processing...</div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+        const PASSWORD = localStorage.getItem('aidobe_password') || prompt('Enter API password:');
+        if (PASSWORD) localStorage.setItem('aidobe_password', PASSWORD);
+
+        // State
+        let currentStep = 1;
+        let scriptData = null;
+        let assetData = null;
+        let audioData = null;
+        let selectedVoice = 'alloy';
+        let selectedMusic = 'upbeat';
+        let selectedMethod = null;
+
+        // DOM Elements
+        const steps = document.querySelectorAll('.step');
+        const stepIndicators = document.querySelectorAll('.step-indicator');
+        const loadingState = document.getElementById('loadingState');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            // Input method selection
+            document.querySelectorAll('.input-method-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectedMethod = this.dataset.method;
+                    
+                    // Visual feedback
+                    document.querySelectorAll('.input-method-btn').forEach(b => b.classList.remove('border-blue-500', 'bg-blue-50'));
+                    this.classList.add('border-blue-500', 'bg-blue-50');
+                    
+                    // Show appropriate input
+                    document.getElementById('article-input').classList.add('hidden');
+                    document.getElementById('topic-input').classList.add('hidden');
+                    document.getElementById('manual-input').classList.add('hidden');
+                    
+                    document.getElementById(selectedMethod + '-input').classList.remove('hidden');
+                });
+            });
+
+            // Voice selection
+            document.querySelectorAll('.voice-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectedVoice = this.dataset.voice;
+                    document.querySelectorAll('.voice-btn').forEach(b => b.classList.remove('border-blue-500', 'bg-blue-50'));
+                    this.classList.add('border-blue-500', 'bg-blue-50');
+                });
+            });
+
+            // Music selection
+            document.querySelectorAll('.music-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectedMusic = this.dataset.music;
+                    document.querySelectorAll('.music-btn').forEach(b => b.classList.remove('border-blue-500', 'bg-blue-50'));
+                    this.classList.add('border-blue-500', 'bg-blue-50');
+                });
+            });
+
+            // Step navigation
+            document.getElementById('generateScript').addEventListener('click', generateScript);
+            document.getElementById('continueToAssets').addEventListener('click', () => goToStep(2));
+            document.getElementById('continueToAudio').addEventListener('click', () => goToStep(3));
+            document.getElementById('generateAudio').addEventListener('click', generateAudio);
+            document.getElementById('continueToReview').addEventListener('click', () => goToStep(4));
+            document.getElementById('continueToGenerate').addEventListener('click', () => goToStep(5));
+            document.getElementById('startGeneration').addEventListener('click', startVideoGeneration);
+            document.getElementById('createAnother').addEventListener('click', () => location.reload());
+
+            // Set default selections
+            document.querySelector('[data-voice="alloy"]').classList.add('border-blue-500', 'bg-blue-50');
+            document.querySelector('[data-music="upbeat"]').classList.add('border-blue-500', 'bg-blue-50');
+        }
+
+        function goToStep(step) {
+            currentStep = step;
+            
+            // Hide all steps
+            steps.forEach(s => s.classList.remove('active'));
+            
+            // Show current step
+            document.getElementById(`step${step}`).classList.add('active');
+            
+            // Update indicators
+            stepIndicators.forEach((indicator, index) => {
+                if (index + 1 < step) {
+                    indicator.classList.add('completed');
+                    indicator.classList.remove('active');
+                } else if (index + 1 === step) {
+                    indicator.classList.add('active');
+                    indicator.classList.remove('completed');
+                } else {
+                    indicator.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        async function generateScript() {
+            if (!selectedMethod) {
+                alert('Please select an input method');
+                return;
+            }
+
+            const loadingText = document.getElementById('loadingText');
+            loadingText.textContent = 'Generating script...';
+            showLoading();
+
+            try {
+                let requestData = {
+                    contentType: selectedMethod,
+                    targetLength: parseInt(document.getElementById('targetLength').value),
+                    platform: document.getElementById('platform').value,
+                    tone: document.getElementById('tone').value
+                };
+
+                if (selectedMethod === 'article') {
+                    requestData.sourceUrl = document.getElementById('articleUrl').value;
+                } else if (selectedMethod === 'topic') {
+                    requestData.topic = document.getElementById('topicInput').value;
+                } else if (selectedMethod === 'manual') {
+                    requestData.manualScript = document.getElementById('manualScript').value;
+                }
+
+                const response = await fetch(`${API_BASE}/api/scripts/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${PASSWORD}`
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Script generation failed');
+                }
+
+                scriptData = result;
+                displayScript(result);
+                hideLoading();
+
+            } catch (error) {
+                console.error('Script generation error:', error);
+                alert(`Script generation failed: ${error.message}`);
+                hideLoading();
+            }
+        }
+
+        function displayScript(script) {
+            const content = document.getElementById('scriptContent');
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="font-medium text-gray-900 mb-2">Scenes:</h4>
+                        ${script.scenes.map((scene, index) => `
+                            <div class="border-l-4 border-blue-500 pl-4 mb-3">
+                                <div class="text-sm font-medium text-gray-900">Scene ${index + 1}</div>
+                                <div class="text-sm text-gray-600">${scene.text}</div>
+                                <div class="text-xs text-gray-500 mt-1">${scene.startTime}s - ${scene.endTime}s</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('scriptPreview').classList.remove('hidden');
+        }
+
+        async function generateAudio() {
+            const loadingText = document.getElementById('loadingText');
+            loadingText.textContent = 'Generating audio...';
+            showLoading();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/audio/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${PASSWORD}`
+                    },
+                    body: JSON.stringify({
+                        scriptId: scriptData.id,
+                        voice: selectedVoice,
+                        backgroundMusic: selectedMusic !== 'none' ? selectedMusic : null
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Audio generation failed');
+                }
+
+                audioData = result;
+                displayAudio(result);
+                hideLoading();
+
+            } catch (error) {
+                console.error('Audio generation error:', error);
+                alert(`Audio generation failed: ${error.message}`);
+                hideLoading();
+            }
+        }
+
+        function displayAudio(audio) {
+            const player = document.getElementById('audioPlayer');
+            player.src = audio.url;
+            document.getElementById('audioPreview').classList.remove('hidden');
+        }
+
+        async function startVideoGeneration() {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const generationProgress = document.getElementById('generationProgress');
+            
+            generationProgress.classList.remove('hidden');
+            document.getElementById('startGeneration').style.display = 'none';
+
+            try {
+                // Simulate video generation progress
+                const steps = [
+                    { progress: 10, text: 'Downloading assets...' },
+                    { progress: 30, text: 'Processing scenes...' },
+                    { progress: 50, text: 'Applying effects...' },
+                    { progress: 70, text: 'Mixing audio...' },
+                    { progress: 90, text: 'Rendering video...' },
+                    { progress: 100, text: 'Complete!' }
+                ];
+
+                for (const step of steps) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    progressBar.style.width = step.progress + '%';
+                    progressText.textContent = step.text;
+                }
+
+                // Mock final video
+                displayFinalVideo('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
+
+            } catch (error) {
+                console.error('Video generation error:', error);
+                alert(`Video generation failed: ${error.message}`);
+            }
+        }
+
+        function displayFinalVideo(videoUrl) {
+            const player = document.getElementById('videoPlayer');
+            player.src = videoUrl;
+            document.getElementById('generationProgress').classList.add('hidden');
+            document.getElementById('finalVideo').classList.remove('hidden');
+        }
+
+        function showLoading() {
+            loadingState.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingState.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -8,5 +8,9 @@ export interface Env {
   REPLICATE_API_TOKEN: string
   ARGIL_API_KEY: string
   ARGIL_WEBHOOK_SECRET: string
+  MODAL_API_URL?: string
+  MODAL_API_TOKEN?: string
+  MODAL_WEBHOOK_SECRET?: string
+  CLOUDFLARE_WORKER_URL?: string
   ENVIRONMENT: string
 }

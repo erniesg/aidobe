@@ -112,7 +112,7 @@ export class ArgilAvatarService {
     totalRequests: 0,
     successRate: 0,
     averageResponseTime: 0,
-    errorBreakdown: {}
+    errorBreakdown: {},
   }
 
   constructor(private env: Env) {}
@@ -120,9 +120,11 @@ export class ArgilAvatarService {
   /**
    * Generate avatar video from script with automatic transcript splitting
    */
-  async generateFromScript(request: ArgilScriptGenerationRequest): Promise<ArgilResult<ArgilVideoResult>> {
+  async generateFromScript(
+    request: ArgilScriptGenerationRequest
+  ): Promise<ArgilResult<ArgilVideoResult>> {
     const startTime = Date.now()
-    
+
     try {
       // Validate avatar exists
       const avatarValidation = await this.validateAvatar(request.avatarId)
@@ -131,20 +133,20 @@ export class ArgilAvatarService {
           success: false,
           error: avatarValidation.error,
           metadata: {
-            executionTime: Date.now() - startTime
-          }
+            executionTime: Date.now() - startTime,
+          },
         }
       }
 
       // Split transcript for Argil's 250 character limit per moment
       const splitResult = this.transcriptSplitter.splitForArgil(request.script, request.wordTimings)
-      
+
       // Create moments from chunks
-      const moments: ArgilMoment[] = splitResult.chunks.map(chunk => ({
+      const moments: ArgilMoment[] = splitResult.chunks.map((chunk) => ({
         transcript: chunk.text,
         avatarId: request.avatarId,
         voiceId: request.voiceId,
-        gestureSlug: request.gestureSlug
+        gestureSlug: request.gestureSlug,
       }))
 
       // Create video with moments
@@ -152,11 +154,11 @@ export class ArgilAvatarService {
         name: request.videoName || `Generated Video ${Date.now()}`,
         moments,
         aspectRatio: request.aspectRatio,
-        subtitles: request.subtitles
+        subtitles: request.subtitles,
       }
 
       const videoResult = await this.createVideo(videoRequest)
-      
+
       if (!videoResult.success) {
         return videoResult
       }
@@ -166,10 +168,9 @@ export class ArgilAvatarService {
         data: videoResult.data,
         metadata: {
           executionTime: Date.now() - startTime,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'generateFromScript', startTime)
     }
@@ -178,9 +179,11 @@ export class ArgilAvatarService {
   /**
    * Generate avatar video from audio segment (creates single moment)
    */
-  async generateFromAudioSegment(request: ArgilAudioGenerationRequest): Promise<ArgilResult<ArgilVideoResult>> {
+  async generateFromAudioSegment(
+    request: ArgilAudioGenerationRequest
+  ): Promise<ArgilResult<ArgilVideoResult>> {
     const startTime = Date.now()
-    
+
     try {
       // Validate inputs
       if (request.transcript.length > 250) {
@@ -188,8 +191,8 @@ export class ArgilAvatarService {
           success: false,
           error: 'Transcript too long for single moment generation (max 250 characters)',
           metadata: {
-            executionTime: Date.now() - startTime
-          }
+            executionTime: Date.now() - startTime,
+          },
         }
       }
 
@@ -200,8 +203,8 @@ export class ArgilAvatarService {
           success: false,
           error: avatarValidation.error,
           metadata: {
-            executionTime: Date.now() - startTime
-          }
+            executionTime: Date.now() - startTime,
+          },
         }
       }
 
@@ -210,28 +213,27 @@ export class ArgilAvatarService {
         transcript: request.transcript,
         avatarId: request.avatarId,
         voiceId: request.voiceId,
-        gestureSlug: request.gestureSlug
+        gestureSlug: request.gestureSlug,
       }
 
       // Create video with single moment
       const videoRequest: ArgilVideoRequest = {
         name: request.videoName || `Audio Segment Video ${Date.now()}`,
         moments: [moment],
-        aspectRatio: request.aspectRatio
+        aspectRatio: request.aspectRatio,
       }
 
       const videoResult = await this.createVideo(videoRequest)
-      
+
       return {
         success: videoResult.success,
         data: videoResult.data,
         error: videoResult.error,
         metadata: {
           executionTime: Date.now() - startTime,
-          retryCount: 0
-        }
+          retryCount: 0,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'generateFromAudioSegment', startTime)
     }
@@ -242,10 +244,10 @@ export class ArgilAvatarService {
    */
   async createVideo(request: ArgilVideoRequest): Promise<ArgilResult<ArgilVideoResult>> {
     const startTime = Date.now()
-    
+
     try {
       const response = await this.makeArgilRequest('/videos', request, 'POST')
-      
+
       if (!response.success) {
         return response
       }
@@ -254,10 +256,9 @@ export class ArgilAvatarService {
         success: true,
         data: response.data as ArgilVideoResult,
         metadata: {
-          executionTime: Date.now() - startTime
-        }
+          executionTime: Date.now() - startTime,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'createVideo', startTime)
     }
@@ -268,10 +269,10 @@ export class ArgilAvatarService {
    */
   async renderVideo(videoId: string): Promise<ArgilResult<ArgilVideoResult>> {
     const startTime = Date.now()
-    
+
     try {
       const response = await this.makeArgilRequest(`/videos/${videoId}/render`, {}, 'POST')
-      
+
       if (!response.success) {
         return response
       }
@@ -280,10 +281,9 @@ export class ArgilAvatarService {
         success: true,
         data: response.data as ArgilVideoResult,
         metadata: {
-          executionTime: Date.now() - startTime
-        }
+          executionTime: Date.now() - startTime,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'renderVideo', startTime)
     }
@@ -294,10 +294,10 @@ export class ArgilAvatarService {
    */
   async getVideoStatus(videoId: string): Promise<ArgilResult<ArgilVideoResult>> {
     const startTime = Date.now()
-    
+
     try {
       const response = await this.makeArgilRequest(`/videos/${videoId}`, null, 'GET')
-      
+
       if (!response.success) {
         return response
       }
@@ -306,10 +306,9 @@ export class ArgilAvatarService {
         success: true,
         data: response.data as ArgilVideoResult,
         metadata: {
-          executionTime: Date.now() - startTime
-        }
+          executionTime: Date.now() - startTime,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'getVideoStatus', startTime)
     }
@@ -321,7 +320,7 @@ export class ArgilAvatarService {
   async getAvatars(): Promise<ArgilResult<ArgilAvatarInfo[]>> {
     const startTime = Date.now()
     const cacheKey = 'avatars'
-    
+
     // Check cache first
     if (this.configCache.has(cacheKey)) {
       const cachedData = this.configCache.get(cacheKey)
@@ -330,8 +329,8 @@ export class ArgilAvatarService {
         data: cachedData,
         metadata: {
           executionTime: Date.now() - startTime,
-          cached: true
-        }
+          cached: true,
+        },
       }
     }
 
@@ -344,15 +343,15 @@ export class ArgilAvatarService {
           name: 'Professional Avatar',
           defaultVoiceId: 'voice-1',
           availableGestures: ['wave', 'point', 'thumbs-up', 'nod', 'friendly'],
-          aspectRatio: '16:9'
+          aspectRatio: '16:9',
         },
         {
           id: 'avatar-2',
           name: 'Casual Avatar',
           defaultVoiceId: 'voice-2',
           availableGestures: ['wave', 'casual', 'relaxed', 'conversational'],
-          aspectRatio: '9:16'
-        }
+          aspectRatio: '9:16',
+        },
       ]
 
       this.configCache.set(cacheKey, avatars)
@@ -362,10 +361,9 @@ export class ArgilAvatarService {
         data: avatars,
         metadata: {
           executionTime: Date.now() - startTime,
-          cached: false
-        }
+          cached: false,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'getAvatars', startTime)
     }
@@ -377,7 +375,7 @@ export class ArgilAvatarService {
   async getVoices(): Promise<ArgilResult<ArgilVoiceInfo[]>> {
     const startTime = Date.now()
     const cacheKey = 'voices'
-    
+
     // Check cache first
     if (this.configCache.has(cacheKey)) {
       const cachedData = this.configCache.get(cacheKey)
@@ -386,8 +384,8 @@ export class ArgilAvatarService {
         data: cachedData,
         metadata: {
           executionTime: Date.now() - startTime,
-          cached: true
-        }
+          cached: true,
+        },
       }
     }
 
@@ -400,15 +398,15 @@ export class ArgilAvatarService {
           name: 'Professional Voice',
           language: 'en-US',
           gender: 'female',
-          style: 'professional'
+          style: 'professional',
         },
         {
           id: 'voice-2',
           name: 'Casual Voice',
           language: 'en-US',
           gender: 'male',
-          style: 'conversational'
-        }
+          style: 'conversational',
+        },
       ]
 
       this.configCache.set(cacheKey, voices)
@@ -418,10 +416,9 @@ export class ArgilAvatarService {
         data: voices,
         metadata: {
           executionTime: Date.now() - startTime,
-          cached: false
-        }
+          cached: false,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'getVoices', startTime)
     }
@@ -430,9 +427,12 @@ export class ArgilAvatarService {
   /**
    * Handle webhook notifications from Argil
    */
-  async webhookHandler(payload: any, signature: string): Promise<ArgilResult<{ processed: boolean, videoId: string }>> {
+  async webhookHandler(
+    payload: any,
+    signature: string
+  ): Promise<ArgilResult<{ processed: boolean; videoId: string }>> {
     const startTime = Date.now()
-    
+
     try {
       // Validate webhook signature
       const isValidSignature = await this.validateWebhookSignature(payload, signature)
@@ -441,8 +441,8 @@ export class ArgilAvatarService {
           success: false,
           error: 'Invalid webhook signature',
           metadata: {
-            executionTime: Date.now() - startTime
-          }
+            executionTime: Date.now() - startTime,
+          },
         }
       }
 
@@ -460,13 +460,12 @@ export class ArgilAvatarService {
         success: true,
         data: {
           processed: true,
-          videoId
+          videoId,
         },
         metadata: {
-          executionTime: Date.now() - startTime
-        }
+          executionTime: Date.now() - startTime,
+        },
       }
-
     } catch (error) {
       return this.handleError(error, 'webhookHandler', startTime)
     }
@@ -482,10 +481,16 @@ export class ArgilAvatarService {
   /**
    * Make API request to Argil with retry logic
    */
-  private async makeArgilRequest(endpoint: string, data: any, method: string = 'POST'): Promise<ArgilResult<any>> {
-    const url = `${this.apiUrl}${endpoint}`
+  private async makeArgilRequest(
+    endpoint: string,
+    data: any,
+    method: string = 'POST'
+  ): Promise<ArgilResult<any>> {
+    // Ensure endpoint starts with /v1/ for the real API
+    const normalizedEndpoint = endpoint.startsWith('/v1/') ? endpoint : `/v1${endpoint}`
+    const url = `${this.apiUrl}${normalizedEndpoint}`
     let lastError: Error | null = null
-    
+
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {
       try {
         const response = await fetch(url, {
@@ -493,20 +498,20 @@ export class ArgilAvatarService {
           headers: {
             'Content-Type': 'application/json',
             'x-api-key': this.env.ARGIL_API_KEY,
-            'User-Agent': 'aidobe/1.0'
+            'User-Agent': 'aidobe/1.0',
           },
-          body: data ? JSON.stringify(data) : undefined
+          body: data ? JSON.stringify(data) : undefined,
         })
 
         this.usageMetrics.totalRequests++
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({})) as any
-          
+          const errorData = (await response.json().catch(() => ({}))) as any
+
           // Handle rate limiting with exponential backoff
           if (response.status === 429 && attempt < this.maxRetries - 1) {
             const delay = this.baseRetryDelay * Math.pow(2, attempt)
-            await new Promise(resolve => setTimeout(resolve, delay))
+            await new Promise((resolve) => setTimeout(resolve, delay))
             continue
           }
 
@@ -516,8 +521,8 @@ export class ArgilAvatarService {
             error: errorData.error || errorData.message || `HTTP ${response.status}`,
             metadata: {
               executionTime: 0,
-              retryCount: attempt
-            }
+              retryCount: attempt,
+            },
           }
         }
 
@@ -529,17 +534,16 @@ export class ArgilAvatarService {
           data: responseData,
           metadata: {
             executionTime: 0,
-            retryCount: attempt
-          }
+            retryCount: attempt,
+          },
         }
-
       } catch (error) {
         lastError = error as Error
         this.trackError('network_error')
-        
+
         if (attempt < this.maxRetries - 1) {
           const delay = this.baseRetryDelay * Math.pow(2, attempt)
-          await new Promise(resolve => setTimeout(resolve, delay))
+          await new Promise((resolve) => setTimeout(resolve, delay))
         }
       }
     }
@@ -549,8 +553,8 @@ export class ArgilAvatarService {
       error: lastError?.message || 'Unknown error',
       metadata: {
         executionTime: 0,
-        retryCount: this.maxRetries
-      }
+        retryCount: this.maxRetries,
+      },
     }
   }
 
@@ -564,8 +568,8 @@ export class ArgilAvatarService {
         success: false,
         error: `Avatar not found: ${avatarId}`,
         metadata: {
-          executionTime: 0
-        }
+          executionTime: 0,
+        },
       }
     }
 
@@ -575,8 +579,8 @@ export class ArgilAvatarService {
         success: true,
         data: true,
         metadata: {
-          executionTime: 0
-        }
+          executionTime: 0,
+        },
       }
     }
 
@@ -586,8 +590,8 @@ export class ArgilAvatarService {
       success: false,
       error: `Avatar not found: ${avatarId}`,
       metadata: {
-        executionTime: 0
-      }
+        executionTime: 0,
+      },
     }
   }
 
@@ -605,15 +609,15 @@ export class ArgilAvatarService {
    */
   private handleError(error: unknown, context: string, startTime: number): ArgilResult<any> {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    
+
     this.trackError(context)
-    
+
     return {
       success: false,
       error: errorMessage,
       metadata: {
-        executionTime: Date.now() - startTime
-      }
+        executionTime: Date.now() - startTime,
+      },
     }
   }
 
@@ -621,7 +625,8 @@ export class ArgilAvatarService {
    * Track error metrics
    */
   private trackError(errorType: string): void {
-    this.usageMetrics.errorBreakdown[errorType] = (this.usageMetrics.errorBreakdown[errorType] || 0) + 1
+    this.usageMetrics.errorBreakdown[errorType] =
+      (this.usageMetrics.errorBreakdown[errorType] || 0) + 1
     this.updateSuccessRate()
   }
 
@@ -636,10 +641,12 @@ export class ArgilAvatarService {
    * Update success rate calculation
    */
   private updateSuccessRate(): void {
-    const totalErrors = Object.values(this.usageMetrics.errorBreakdown).reduce((sum, count) => sum + count, 0)
+    const totalErrors = Object.values(this.usageMetrics.errorBreakdown).reduce(
+      (sum, count) => sum + count,
+      0
+    )
     const successfulRequests = this.usageMetrics.totalRequests - totalErrors
-    this.usageMetrics.successRate = this.usageMetrics.totalRequests > 0 
-      ? successfulRequests / this.usageMetrics.totalRequests 
-      : 0
+    this.usageMetrics.successRate =
+      this.usageMetrics.totalRequests > 0 ? successfulRequests / this.usageMetrics.totalRequests : 0
   }
 }

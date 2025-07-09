@@ -1,0 +1,97 @@
+# Argil API Configuration
+# Voice IDs and Avatar settings - update these after fetching from your account
+
+# Available voices from Argil account
+voices:
+  - id: "voice-default"
+    name: "Default Professional Voice"
+    language: "en-US"
+    gender: "female"
+    style: "professional"
+    description: "Clear, professional female voice suitable for business content"
+  
+  - id: "voice-casual"
+    name: "Casual Conversational Voice"
+    language: "en-US"
+    gender: "male"
+    style: "conversational"
+    description: "Friendly, approachable male voice for casual content"
+
+# TODO: Replace with actual voice IDs from your Argil account
+# To fetch these, use: GET https://api.argil.ai/voices
+# Example real voice ID format: "voi_12345abcdef67890"
+
+# Available avatars from Argil account
+avatars:
+  - id: "avatar-professional"
+    name: "Professional Avatar"
+    defaultVoiceId: "voice-default"
+    availableGestures: ["wave", "point", "thumbs-up", "nod", "friendly", "professional"]
+    aspectRatio: "16:9"
+    description: "Business professional avatar suitable for corporate content"
+  
+  - id: "avatar-casual"
+    name: "Casual Avatar"
+    defaultVoiceId: "voice-casual"
+    availableGestures: ["wave", "casual", "relaxed", "conversational", "friendly"]
+    aspectRatio: "9:16"
+    description: "Friendly avatar perfect for social media and informal content"
+
+# TODO: Replace with actual avatar IDs from your Argil account
+# To fetch these, use: GET https://api.argil.ai/avatars
+# Example real avatar ID format: "ava_12345abcdef67890"
+
+# API Settings
+api:
+  baseUrl: "https://api.argil.ai"
+  timeout: 30000  # 30 seconds
+  retryAttempts: 3
+  retryDelay: 1000  # 1 second base delay
+
+# Cost Management Settings
+cost_management:
+  # Set to true to use mock responses instead of real API calls during development
+  use_mock_responses: true
+  
+  # Maximum requests per session to prevent accidental high costs
+  max_requests_per_session: 10
+  
+  # Track usage for cost monitoring
+  log_api_calls: true
+  
+  # Estimated cost per API call (update based on your plan)
+  estimated_cost_per_video: 0.10  # $0.10 per video generation
+
+# Default Generation Settings
+defaults:
+  aspectRatio: "16:9"
+  subtitles:
+    enabled: true
+    language: "en"
+  backgroundMusic:
+    enabled: false
+    volume: 0.3
+  quality: "high"
+  
+# Webhook Configuration
+webhook:
+  # Set this to your application's webhook endpoint
+  endpoint: "/api/webhooks/argil"
+  secret: "your-webhook-secret-here"  # Change this to a secure secret
+  
+# Environment-specific overrides
+environments:
+  development:
+    use_mock_responses: true
+    max_requests_per_session: 5
+    log_api_calls: true
+    
+  staging:
+    use_mock_responses: false
+    max_requests_per_session: 20
+    log_api_calls: true
+    
+  production:
+    use_mock_responses: false
+    max_requests_per_session: 100
+    log_api_calls: true

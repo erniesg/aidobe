@@ -473,7 +473,7 @@ export class AudioSegmentationService {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
+      const error = (await response.json().catch(() => ({}))) as any
       throw new Error(error.error || `HTTP ${response.status}`)
     }
 
@@ -496,7 +496,7 @@ export class AudioSegmentationService {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
+      const error = (await response.json().catch(() => ({}))) as any
       throw new Error(error.error || `HTTP ${response.status}`)
     }
 
@@ -519,7 +519,7 @@ export class AudioSegmentationService {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
+      const error = (await response.json().catch(() => ({}))) as any
       throw new Error(error.error || `HTTP ${response.status}`)
     }
 
@@ -545,11 +545,13 @@ export class AudioSegmentationService {
     })
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}))
+      const error = (await response.json().catch(() => ({}))) as any
       throw new Error(error.error || 'Audio processing failed')
     }
 
-    const result = await response.json()
+    const result = (await response.json()) as {
+      segments: Array<{ sceneId: string; audioUrl: string; duration: number }>
+    }
 
     // Return the segments directly
     return result

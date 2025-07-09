@@ -21,7 +21,7 @@ const mockEnv: Env = {
 }
 
 // Mock services
-const mockStorage = {
+const mockStorageInstance = {
   uploadAsset: vi.fn(),
   getDownloadUrl: vi.fn(),
   deleteAsset: vi.fn(),
@@ -35,7 +35,7 @@ const mockStorage = {
   deleteOutput: vi.fn(),
 }
 
-const mockDatabase = {
+const mockDatabaseInstance = {
   createAsset: vi.fn(),
   getAsset: vi.fn(),
   updateAsset: vi.fn(),
@@ -58,36 +58,34 @@ const mockDatabase = {
 }
 
 vi.mock('../../../src/services/storage', () => ({
-  StorageService: vi.fn().mockImplementation(() => mockStorage),
+  StorageService: vi.fn().mockImplementation(() => mockStorageInstance),
 }))
 
 vi.mock('../../../src/services/database', () => ({
-  DatabaseService: vi.fn().mockImplementation(() => mockDatabase),
+  DatabaseService: vi.fn().mockImplementation(() => mockDatabaseInstance),
 }))
+
+// Import the routes after mocking
+import { createAssetPipelineRoutes } from '../../../src/handlers/asset-pipeline'
 
 describe('Asset Pipeline Handlers', () => {
   let app: Hono
   let assetRoutes: any
 
-  beforeEach(async () => {
-    app = new Hono()
-    
-    // Reset mocks
+  beforeEach(() => {
+    // Reset mocks before each test
     vi.clearAllMocks()
     
     // Set up default successful mocking
-    mockStorage.uploadAsset.mockResolvedValue({
+    mockStorageInstance.uploadAsset.mockResolvedValue({
       success: true,
       data: {
-        key: 'assets/test-asset-123.mp4',
         url: 'https://storage.example.com/assets/test-asset-123.mp4',
-        size: 15728640,
-        contentType: 'video/mp4',
         uploadedAt: new Date().toISOString(),
       },
     })
     
-    mockStorage.getDownloadUrl.mockResolvedValue({
+    mockStorageInstance.getDownloadUrl.mockResolvedValue({
       success: true,
       data: {
         downloadUrl: 'https://storage.example.com/download/test-asset-123.mp4?token=abc123',
@@ -95,7 +93,24 @@ describe('Asset Pipeline Handlers', () => {
       },
     })
     
-    mockDatabase.createAsset.mockResolvedValue({
+    mockStorageInstance.deleteAsset.mockResolvedValue({
+      success: true,
+    })
+    
+    mockStorageInstance.listAssets.mockResolvedValue({
+      success: true,
+      data: {
+        totalAssets: 150,
+        totalSize: 2147483648,
+        assetTypes: {
+          video: 75,
+          image: 65,
+          audio: 10,
+        },
+      },
+    })
+    
+    mockDatabaseInstance.createAsset.mockResolvedValue({
       id: 'test-asset-123',
       filename: 'sample-video.mp4',
       contentType: 'video/mp4',
@@ -111,8 +126,64 @@ describe('Asset Pipeline Handlers', () => {
       },
     })
     
-    // Import the routes after mocking
-    const { createAssetPipelineRoutes } = await import('../../../src/handlers/asset-pipeline')
+    mockDatabaseInstance.getAsset.mockResolvedValue({
+      id: 'test-asset-123',
+      filename: 'sample-video.mp4',
+      contentType: 'video/mp4',
+      size: 15728640,
+      r2Key: 'assets/test-asset-123.mp4',
+      url: 'https://storage.example.com/assets/test-asset-123.mp4',
+      assetType: 'video',
+      uploadedAt: new Date().toISOString(),
+      metadata: {
+        duration: 120,
+        resolution: '1080p',
+        frameRate: 30,
+      },
+    })
+    
+    mockDatabaseInstance.getAssets.mockResolvedValue({
+      assets: [
+        {
+          id: 'asset-1',
+          filename: 'video1.mp4',
+          assetType: 'video',
+          uploadedAt: new Date().toISOString(),
+        },
+        {
+          id: 'asset-2',
+          filename: 'image1.jpg',
+          assetType: 'image',
+          uploadedAt: new Date().toISOString(),
+        },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 20,
+      totalPages: 1,
+    })
+    
+    mockDatabaseInstance.getAssetsByType.mockResolvedValue({
+      assets: [
+        {
+          id: 'video-1',
+          filename: 'video1.mp4',
+          assetType: 'video',
+          uploadedAt: new Date().toISOString(),
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      totalPages: 1,
+    })
+    
+    mockDatabaseInstance.deleteAsset.mockResolvedValue(undefined)
+    
+    // Create fresh app instance
+    app = new Hono()
+    
+    // Create routes
     assetRoutes = createAssetPipelineRoutes()
     app.route('/api/assets', assetRoutes)
   })
@@ -156,8 +227,8 @@ describe('Asset Pipeline Handlers', () => {
       expect(body.data.asset.filename).toBe('sample-video.mp4')
       expect(body.data.asset.assetType).toBe('video')
       expect(body.data.upload.url).toBe('https://storage.example.com/assets/test-asset-123.mp4')
-      expect(mockStorage.uploadAsset).toHaveBeenCalled()
-      expect(mockDatabase.createAsset).toHaveBeenCalled()
+      expect(mockStorageInstance.uploadAsset).toHaveBeenCalled()
+      expect(mockDatabaseInstance.createAsset).toHaveBeenCalled()
     })
 
     it('should upload an image asset successfully', async () => {
@@ -172,7 +243,7 @@ describe('Asset Pipeline Handlers', () => {
         },
       }
 
-      mockDatabase.createAsset.mockResolvedValue({
+      mockDatabaseInstance.createAsset.mockResolvedValueOnce({
         id: 'test-image-456',
         filename: 'sample-image.jpg',
         contentType: 'image/jpeg',
@@ -261,7 +332,7 @@ describe('Asset Pipeline Handlers', () => {
     })
 
     it('should handle storage upload failures', async () => {
-      mockStorage.uploadAsset.mockResolvedValue({
+      mockStorageInstance.uploadAsset.mockResolvedValueOnce({
         success: false,
         error: 'Storage service unavailable',
       })
@@ -295,7 +366,7 @@ describe('Asset Pipeline Handlers', () => {
 
   describe('GET /api/assets/:assetId/download', () => {
     it('should generate download URL for existing asset', async () => {
-      mockDatabase.getAsset.mockResolvedValue({
+      mockDatabaseInstance.getAsset.mockResolvedValue({
         id: 'test-asset-123',
         filename: 'sample-video.mp4',
         contentType: 'video/mp4',
@@ -317,12 +388,12 @@ describe('Asset Pipeline Handlers', () => {
       expect(body.data.downloadUrl).toBe('https://storage.example.com/download/test-asset-123.mp4?token=abc123')
       expect(body.data.expiresAt).toBeDefined()
       expect(body.data.asset.filename).toBe('sample-video.mp4')
-      expect(mockDatabase.getAsset).toHaveBeenCalledWith('test-asset-123')
-      expect(mockStorage.getDownloadUrl).toHaveBeenCalled()
+      expect(mockDatabaseInstance.getAsset).toHaveBeenCalledWith('test-asset-123')
+      expect(mockStorageInstance.getDownloadUrl).toHaveBeenCalled()
     })
 
     it('should handle non-existent asset', async () => {
-      mockDatabase.getAsset.mockResolvedValue(null)
+      mockDatabaseInstance.getAsset.mockResolvedValueOnce(null)
 
       const response = await app.request('/api/assets/non-existent/download', {
         method: 'GET',
@@ -336,12 +407,12 @@ describe('Asset Pipeline Handlers', () => {
     })
 
     it('should handle storage download URL generation failures', async () => {
-      mockDatabase.getAsset.mockResolvedValue({
+      mockDatabaseInstance.getAsset.mockResolvedValueOnce({
         id: 'test-asset-123',
         r2Key: 'assets/test-asset-123.mp4',
       })
 
-      mockStorage.getDownloadUrl.mockResolvedValue({
+      mockStorageInstance.getDownloadUrl.mockResolvedValueOnce({
         success: false,
         error: 'Failed to generate download URL',
       })
@@ -375,7 +446,7 @@ describe('Asset Pipeline Handlers', () => {
         },
       ]
 
-      mockDatabase.getAssets.mockResolvedValue({
+      mockDatabaseInstance.getAssets.mockResolvedValue({
         assets: mockAssets,
         total: 2,
         page: 1,
@@ -394,7 +465,7 @@ describe('Asset Pipeline Handlers', () => {
       expect(body.data.assets).toHaveLength(2)
       expect(body.data.pagination.total).toBe(2)
       expect(body.data.pagination.page).toBe(1)
-      expect(mockDatabase.getAssets).toHaveBeenCalledWith(1, 20)
+      expect(mockDatabaseInstance.getAssets).toHaveBeenCalledWith(1, 20)
     })
 
     it('should filter assets by type', async () => {
@@ -407,7 +478,7 @@ describe('Asset Pipeline Handlers', () => {
         },
       ]
 
-      mockDatabase.getAssetsByType.mockResolvedValue({
+      mockDatabaseInstance.getAssetsByType.mockResolvedValue({
         assets: mockVideoAssets,
         total: 1,
         page: 1,
@@ -425,7 +496,7 @@ describe('Asset Pipeline Handlers', () => {
       expect(body.success).toBe(true)
       expect(body.data.assets).toHaveLength(1)
       expect(body.data.assets[0].assetType).toBe('video')
-      expect(mockDatabase.getAssetsByType).toHaveBeenCalledWith('video', 1, 20)
+      expect(mockDatabaseInstance.getAssetsByType).toHaveBeenCalledWith('video', 1, 20)
     })
   })
 
@@ -447,7 +518,7 @@ describe('Asset Pipeline Handlers', () => {
         },
       }
 
-      mockDatabase.getAsset.mockResolvedValue(mockAsset)
+      mockDatabaseInstance.getAsset.mockResolvedValue(mockAsset)
 
       const response = await app.request('/api/assets/test-asset-123', {
         method: 'GET',
@@ -463,7 +534,7 @@ describe('Asset Pipeline Handlers', () => {
     })
 
     it('should handle non-existent asset', async () => {
-      mockDatabase.getAsset.mockResolvedValue(null)
+      mockDatabaseInstance.getAsset.mockResolvedValueOnce(null)
 
       const response = await app.request('/api/assets/non-existent', {
         method: 'GET',
@@ -485,9 +556,9 @@ describe('Asset Pipeline Handlers', () => {
         filename: 'sample-video.mp4',
       }
 
-      mockDatabase.getAsset.mockResolvedValue(mockAsset)
-      mockStorage.deleteAsset.mockResolvedValue({ success: true })
-      mockDatabase.deleteAsset.mockResolvedValue(undefined)
+      mockDatabaseInstance.getAsset.mockResolvedValue(mockAsset)
+      mockStorageInstance.deleteAsset.mockResolvedValue({ success: true })
+      mockDatabaseInstance.deleteAsset.mockResolvedValue(undefined)
 
       const response = await app.request('/api/assets/test-asset-123', {
         method: 'DELETE',
@@ -498,12 +569,12 @@ describe('Asset Pipeline Handlers', () => {
       const body = await response.json()
       expect(body.success).toBe(true)
       expect(body.data.deleted.assetId).toBe('test-asset-123')
-      expect(mockStorage.deleteAsset).toHaveBeenCalledWith('assets/test-asset-123.mp4')
-      expect(mockDatabase.deleteAsset).toHaveBeenCalledWith('test-asset-123')
+      expect(mockStorageInstance.deleteAsset).toHaveBeenCalledWith('assets/test-asset-123.mp4')
+      expect(mockDatabaseInstance.deleteAsset).toHaveBeenCalledWith('test-asset-123')
     })
 
     it('should handle non-existent asset deletion', async () => {
-      mockDatabase.getAsset.mockResolvedValue(null)
+      mockDatabaseInstance.getAsset.mockResolvedValueOnce(null)
 
       const response = await app.request('/api/assets/non-existent', {
         method: 'DELETE',
@@ -522,8 +593,8 @@ describe('Asset Pipeline Handlers', () => {
         r2Key: 'assets/test-asset-123.mp4',
       }
 
-      mockDatabase.getAsset.mockResolvedValue(mockAsset)
-      mockStorage.deleteAsset.mockResolvedValue({
+      mockDatabaseInstance.getAsset.mockResolvedValueOnce(mockAsset)
+      mockStorageInstance.deleteAsset.mockResolvedValueOnce({
         success: false,
         error: 'Storage deletion failed',
       })
@@ -542,7 +613,7 @@ describe('Asset Pipeline Handlers', () => {
 
   describe('Asset Health and Statistics', () => {
     it('should return asset storage health status', async () => {
-      mockStorage.listAssets.mockResolvedValue({
+      mockStorageInstance.listAssets.mockResolvedValue({
         success: true,
         data: {
           totalAssets: 150,

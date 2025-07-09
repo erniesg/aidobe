@@ -5,11 +5,13 @@ import { authMiddleware } from './middleware/auth'
 import { errorHandler } from './middleware/error'
 import { imageRoutes } from './handlers/image'
 import { videoRoutes } from './handlers/video'
+import { videoWebhookRoutes } from './handlers/video-webhooks'
 import { promptRoutes } from './handlers/prompt'
 import { downloadRoutes } from './handlers/download'
 import { mediaRoutes } from './handlers/media'
 import { createScriptRoutes } from './handlers/scripts'
 import { createAssetRoutes } from './handlers/assets'
+import { createAssetPipelineRoutes } from './handlers/asset-pipeline'
 import { createAudioRoutes } from './handlers/audio'
 import { createJobRoutes } from './handlers/jobs'
 import type { Env } from './types/env'
@@ -1655,6 +1657,9 @@ app.get('/', async (c) => {
 </html>`)
 })
 
+// Video webhook routes (no authentication required for webhooks)
+app.route('/api/video/webhooks', videoWebhookRoutes)
+
 // Create API with dynamic route mounting
 app.use('/api/*', authMiddleware)
 
@@ -1676,12 +1681,21 @@ app.all('/api/scripts/*', async (c) => {
 })
 
 app.all('/api/assets/*', async (c) => {
-  const assetRoutes = createAssetRoutes(c.env)
   const path = c.req.path.replace('/api/assets', '')
-  const newRequest = new Request(c.req.url.replace('/api/assets', ''), c.req.raw)
-
-  const response = await assetRoutes.fetch(newRequest, c.env)
-  return response
+  
+  // Check if this is an asset pipeline route (upload, download, etc.)
+  if (path.startsWith('/upload') || path.startsWith('/health') || path.match(/^\/[^\/]+\/download$/) || path.match(/^\/[^\/]+$/) || path === '/') {
+    const assetPipelineRoutes = createAssetPipelineRoutes()
+    const newRequest = new Request(c.req.url.replace('/api/assets', ''), c.req.raw)
+    const response = await assetPipelineRoutes.fetch(newRequest, c.env)
+    return response
+  } else {
+    // Use the existing asset discovery routes for other paths
+    const assetRoutes = createAssetRoutes(c.env)
+    const newRequest = new Request(c.req.url.replace('/api/assets', ''), c.req.raw)
+    const response = await assetRoutes.fetch(newRequest, c.env)
+    return response
+  }
 })
 
 app.all('/api/audio/*', async (c) => {

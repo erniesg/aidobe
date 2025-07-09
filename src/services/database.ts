@@ -382,4 +382,107 @@ export class DatabaseService {
       .bind(id)
       .run()
   }
+
+  // Asset management methods
+  async createAsset(asset: any): Promise<any> {
+    await this.db
+      .prepare(`
+        INSERT INTO assets (
+          id, filename, contentType, size, r2Key, url, assetType, 
+          uploadedAt, metadata
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        asset.id,
+        asset.filename,
+        asset.contentType,
+        asset.size,
+        asset.r2Key,
+        asset.url,
+        asset.assetType,
+        asset.uploadedAt,
+        JSON.stringify(asset.metadata)
+      )
+      .run()
+
+    return asset
+  }
+
+  async getAsset(id: string): Promise<any> {
+    const result = await this.db
+      .prepare('SELECT * FROM assets WHERE id = ?')
+      .bind(id)
+      .first()
+
+    if (!result) return null
+
+    return {
+      ...result,
+      metadata: JSON.parse((result.metadata as string) || '{}')
+    }
+  }
+
+  async deleteAsset(id: string): Promise<void> {
+    await this.db
+      .prepare('DELETE FROM assets WHERE id = ?')
+      .bind(id)
+      .run()
+  }
+
+  async getAssets(page: number = 1, pageSize: number = 20): Promise<any> {
+    const offset = (page - 1) * pageSize
+
+    const [assets, countResult] = await Promise.all([
+      this.db
+        .prepare('SELECT * FROM assets ORDER BY uploadedAt DESC LIMIT ? OFFSET ?')
+        .bind(pageSize, offset)
+        .all(),
+      this.db
+        .prepare('SELECT COUNT(*) as total FROM assets')
+        .first()
+    ])
+
+    const total = (countResult?.total as number) || 0
+    const totalPages = Math.ceil(total / pageSize)
+
+    return {
+      assets: assets.results?.map(asset => ({
+        ...asset,
+        metadata: JSON.parse((asset.metadata as string) || '{}')
+      })) || [],
+      total,
+      page,
+      pageSize,
+      totalPages
+    }
+  }
+
+  async getAssetsByType(type: string, page: number = 1, pageSize: number = 20): Promise<any> {
+    const offset = (page - 1) * pageSize
+
+    const [assets, countResult] = await Promise.all([
+      this.db
+        .prepare('SELECT * FROM assets WHERE assetType = ? ORDER BY uploadedAt DESC LIMIT ? OFFSET ?')
+        .bind(type, pageSize, offset)
+        .all(),
+      this.db
+        .prepare('SELECT COUNT(*) as total FROM assets WHERE assetType = ?')
+        .bind(type)
+        .first()
+    ])
+
+    const total = (countResult?.total as number) || 0
+    const totalPages = Math.ceil(total / pageSize)
+
+    return {
+      assets: assets.results?.map(asset => ({
+        ...asset,
+        metadata: JSON.parse((asset.metadata as string) || '{}')
+      })) || [],
+      total,
+      page,
+      pageSize,
+      totalPages
+    }
+  }
 }

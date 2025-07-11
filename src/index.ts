@@ -14,6 +14,8 @@ import { createAssetRoutes } from './handlers/assets'
 import { createAssetPipelineRoutes } from './handlers/asset-pipeline'
 import { createAudioRoutes } from './handlers/audio'
 import { createJobRoutes } from './handlers/jobs'
+import { createArgilHandlers } from './handlers/argil'
+import { ArticleHandlers, createArticleRoutes } from './handlers/articles'
 import type { Env } from './types/env'
 
 const app = new Hono<{ Bindings: Env }>()
@@ -1713,6 +1715,26 @@ app.all('/api/jobs/*', async (c) => {
   const newRequest = new Request(c.req.url.replace('/api/jobs', ''), c.req.raw)
 
   const response = await jobRoutes.fetch(newRequest, c.env)
+  return response
+})
+
+app.all('/api/argil/*', async (c) => {
+  const argilApp = new Hono<{ Bindings: Env }>()
+  const argilRoutes = createArgilHandlers(argilApp)
+  const path = c.req.path.replace('/api/argil', '')
+  const newRequest = new Request(c.req.url.replace('/api/argil', ''), c.req.raw)
+  
+  const response = await argilRoutes.fetch(newRequest, c.env)
+  return response
+})
+
+app.all('/api/articles/*', async (c) => {
+  const articleHandlers = new ArticleHandlers(c.env)
+  const articleRoutes = createArticleRoutes(articleHandlers)
+  const path = c.req.path.replace('/api/articles', '')
+  const newRequest = new Request(c.req.url.replace('/api/articles', ''), c.req.raw)
+  
+  const response = await articleRoutes.fetch(newRequest, c.env)
   return response
 })
 

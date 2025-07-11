@@ -4,16 +4,17 @@ This file provides guidance to Claude Code when working with the aidobe codebase
 
 ## Project Overview
 
-aidobe is a sophisticated AI-powered video generation platform built on Cloudflare Workers. It serves as a clean, modern evolution of the wanx video generation platform, focusing on flexible workflow-based video creation with avatar integration, multi-source asset orchestration, and production-ready media generation.
+aidobe is a next-generation AI-powered content generation platform built on Cloudflare Workers. It serves as a clean, modern evolution of the wanx video generation platform, focusing on intelligent article-to-video transformation, multi-provider LLM integration, and production-ready media generation with comprehensive observability.
 
 ## Core Mission
 
-- **Flexible Workflow Video Generation**: Support for multiple video creation workflows (Original, Argil Avatar, Custom)
-- **Avatar Integration**: Seamless Argil avatar generation with lip-sync, gesture management, and transcript splitting
-- **Multi-Source Asset Orchestration**: Intelligent asset discovery and selection from Pexels, Pixabay, Envato, and AI generation
-- **Atomic & Idempotent Operations**: Each endpoint performs one operation and can be resumed/recovered (inherent REGEN capability)
-- **Configuration-Driven**: Runtime configurable prompts, workflows, and generation parameters with Jinja2 templating
-- **Production-Ready at Scale**: High-quality video output with advanced effects, Ken Burns, and professional composition
+- **Article-to-Video Intelligence**: Transform Tech in Asia articles into engaging video content with Gen-Z personality
+- **Multi-Provider LLM Integration**: Seamless switching between OpenAI, Anthropic, and Google Gemini with vision support
+- **Template-Based Prompt Management**: File-based prompt system with Handlebars templating (no KV storage dependency)
+- **Algolia Content Integration**: Direct article retrieval from posts-v2 index for automated content workflows
+- **Comprehensive Observability**: Langfuse tracing for all LLM operations with detailed analytics
+- **Wanx-Compatible Output**: Structured JSON video scripts matching wanx format for seamless integration
+- **Scene Planning Intelligence**: Automated timing extraction and scene breakdown from video scripts
 
 ## Architecture Philosophy
 
@@ -52,10 +53,12 @@ aidobe is a sophisticated AI-powered video generation platform built on Cloudfla
 - **Validation**: Zod for schema validation and type generation
 - **Testing**: Vitest for unit/integration tests
 - **Storage**: Cloudflare R2 (S3-compatible) + D1 (SQLite)
-- **AI Providers**: OpenAI DALL-E, Replicate, Stability AI, Argil (avatars), ElevenLabs (TTS)
+- **AI Providers**: OpenAI (GPT-4o, DALL-E), Anthropic (Claude Sonnet 4), Google (Gemini 2.5 Flash), Replicate, Argil
+- **Content Integration**: Algolia (posts-v2 index), Tech in Asia article retrieval
+- **Observability**: Langfuse tracing, structured logging, comprehensive analytics
+- **Template Engine**: File-based Handlebars templates for prompt management
 - **Media Processing**: FFmpeg (via Modal), MoviePy, ImageMagick, Ken Burns effects
 - **Asset Sources**: Pexels, Pixabay, Envato, SERP API, AI image generation
-- **Video Processing**: Modal.com for heavy video assembly and effects processing
 
 **Development Tools:**
 - **Package Manager**: npm with lockfile versioning
@@ -70,42 +73,34 @@ aidobe/
 ├── src/
 │   ├── handlers/          # HTTP route handlers
 │   │   ├── image.ts       # Image generation endpoints
-│   │   ├── video.ts       # Video generation endpoints
-│   │   ├── scripts.ts     # Script generation and management
+│   │   ├── video.ts       # Video generation endpoints  
+│   │   ├── scripts.ts     # ✅ Script generation with multi-provider LLM support
+│   │   ├── articles.ts    # ✅ Algolia article search and retrieval
 │   │   ├── assets.ts      # Asset orchestration and management
 │   │   ├── audio.ts       # Audio processing and TTS
-│   │   ├── avatars.ts     # Avatar generation (Argil)
-│   │   ├── workflows.ts   # Workflow configuration and execution
+│   │   ├── argil.ts       # ✅ Argil avatar generation workflows
 │   │   ├── prompt.ts      # Prompt template management
 │   │   ├── download.ts    # Media download and export
 │   │   └── jobs.ts        # Job management and tracking
 │   ├── services/          # Business logic layer
-│   │   ├── ai/           # AI provider integrations
-│   │   │   ├── base.ts    # Abstract base AI provider
-│   │   │   ├── openai.ts  # OpenAI integration
-│   │   │   ├── replicate.ts # Replicate API integration
-│   │   │   ├── stability.ts # Stability AI integration
-│   │   │   ├── argil.ts   # Argil avatar integration
-│   │   │   └── elevenlabs.ts # ElevenLabs TTS integration
-│   │   ├── media/        # Media processing services
-│   │   │   ├── effects.ts # Video effects (Ken Burns, overlays)
-│   │   │   ├── composition.ts # Video composition and assembly
-│   │   │   └── transcription.ts # Audio transcription and timing
-│   │   ├── assets/       # Asset orchestration services
-│   │   │   ├── orchestrator.ts # Multi-source asset coordination
-│   │   │   ├── pexels.ts  # Pexels API integration
-│   │   │   ├── pixabay.ts # Pixabay API integration
-│   │   │   └── envato.ts  # Envato API integration
-│   │   ├── workflows/    # Workflow management
-│   │   │   ├── original.ts # Original workflow (script → TTS → video)
-│   │   │   ├── argil.ts   # Argil avatar workflow
-│   │   │   └── manager.ts # Workflow orchestration
-│   │   ├── storage.ts    # R2 storage operations
-│   │   ├── database.ts   # D1 database operations
-│   │   └── cache.ts      # Caching layer for performance
+│   │   ├── multi-provider-llm.ts # ✅ Unified LLM service (OpenAI, Anthropic, Google)
+│   │   ├── llm-tracing.ts # ✅ Langfuse observability service
+│   │   ├── algolia.ts     # ✅ Article retrieval from posts-v2 index
+│   │   ├── scene-planning.ts # ✅ Scene timing and breakdown service
+│   │   ├── script-generation.ts # Legacy script generation service
+│   │   ├── openai.ts      # OpenAI integration
+│   │   ├── replicate.ts   # Replicate API integration
+│   │   ├── config.ts      # Configuration management
+│   │   ├── storage.ts     # R2 storage operations
+│   │   └── database.ts    # D1 database operations
+│   ├── templates/         # ✅ Template management
+│   │   └── prompts/       # ✅ File-based prompt templates
+│   │       └── video-script-generation.md # ✅ Gen-Z Tech in Asia prompt
+│   ├── schemas/           # ✅ Zod validation schemas
+│   │   ├── script.ts      # Script generation schemas
+│   │   ├── scene-planning.ts # ✅ Scene planning schemas  
+│   │   └── job.ts         # Job management schemas
 │   ├── utils/            # Utility functions
-│   │   ├── transcript-splitter.ts # Transcript splitting for avatars
-│   │   ├── audio-segmentation.ts # Audio segmentation for lip-sync
 │   │   ├── logger.ts     # Structured logging
 │   │   ├── crypto.ts     # Cryptographic utilities
 │   │   ├── validation.ts # Common validation functions
@@ -649,37 +644,76 @@ class Logger {
 - **Quality Metrics**: Assess generation quality and user satisfaction
 - **Growth Metrics**: Track user acquisition and retention
 
-## Future Enhancements
+## Implementation Status
 
-### Phase 1: Core Features (Current)
-- [x] Basic image generation with OpenAI and Replicate
+### ✅ Phase 1: Core Intelligence Platform (COMPLETED)
+- [x] Multi-provider LLM integration (OpenAI GPT-4o, Anthropic Sonnet 4, Google Gemini 2.5)
+- [x] Vision/multimodal support for image analysis across all providers
+- [x] Template-based prompt management with file system (no KV dependency)
+- [x] Algolia article integration with posts-v2 index
+- [x] Wanx-compatible video script generation with structured JSON output
+- [x] Scene planning service with timing extraction
+- [x] Langfuse tracing and comprehensive observability
 - [x] Authentication and rate limiting
 - [x] Storage and download functionality
-- [x] Comprehensive testing framework
 
-### Phase 2: Avatar Integration (Current Priority)
-- [ ] Argil avatar generation with gesture management
-- [ ] Transcript splitting utility for API limits
-- [ ] Audio segmentation for lip-sync
-- [ ] Enhanced asset orchestration with multi-source support
+### 🚧 Phase 2: Video Production Pipeline (60% Complete)
+- [x] Article-to-script generation (direct input + Algolia fetching)
+- [x] Scene planning and timing breakdown
+- [x] Argil avatar workflow endpoints
+- [ ] Asset orchestration integration with new script system
+- [ ] Audio/TTS generation integration
+- [ ] Video assembly workflow updates
 
-### Phase 3: Advanced Video Features
-- [ ] Ken Burns effects and video composition
-- [ ] Text overlays with animations
-- [ ] Professional video effects pipeline
+### 📋 Phase 3: Testing & Production Readiness (40% Complete)
+- [ ] Comprehensive unit tests for LLM and Algolia services
+- [ ] Integration tests for full article-to-video pipeline
+- [ ] Performance optimization and caching strategies
+- [ ] Enhanced error handling and recovery mechanisms
+
+### 🔮 Phase 4: Advanced Features (Planned)
+- [ ] Ken Burns effects and advanced video composition
 - [ ] Multi-workflow orchestration system
+- [ ] Real-time configuration updates
+- [ ] Advanced analytics dashboard and insights
 
-### Phase 4: Configuration & Flexibility
-- [ ] Configurable prompt templates with Jinja2
-- [ ] Workflow template management
-- [ ] Runtime configuration updates
-- [ ] Advanced job tracking and recovery
+## Key Implemented Services & Endpoints
 
-### Phase 5: Production Features
-- [ ] Comprehensive testing framework
-- [ ] Performance optimization and caching
-- [ ] Advanced analytics and monitoring
-- [ ] Multi-tenant architecture
+### 🤖 Multi-Provider LLM Service (`src/services/multi-provider-llm.ts`)
+- **Providers**: OpenAI GPT-4o, Anthropic Claude Sonnet 4, Google Gemini 2.5 Flash
+- **Features**: Text generation, vision/multimodal support, structured JSON output
+- **Capabilities**: Provider fallback, cost estimation, model validation
+
+### 📚 Algolia Integration (`src/services/algolia.ts` + `src/handlers/articles.ts`)
+- **Index**: posts-v2 (Tech in Asia articles)
+- **Endpoints**: 
+  - `GET /api/articles/search` - Search with filters
+  - `GET /api/articles/:objectId` - Get specific article
+  - `POST /api/articles/search/title` - Title-based search
+  - `GET /api/articles/video-candidates` - Articles suitable for video generation
+
+### 📝 Video Script Generation (`src/handlers/scripts.ts`)
+- **Endpoint**: `POST /api/scripts/generate-video-script`
+- **Input**: Direct content OR Algolia object ID (auto-fetch)
+- **Features**: Multi-provider LLM, optional image analysis, custom instructions
+- **Output**: Wanx-compatible structured JSON with hook, conflict, body, conclusion
+
+### 🎬 Scene Planning Service (`src/services/scene-planning.ts`)
+- **Endpoint**: `POST /api/scripts/plan-scenes`
+- **Features**: Automatic timing extraction, scene breakdown, asset suggestions
+- **Input**: Video script + transcription data
+- **Output**: Timed scenes with visual directions and B-roll keywords
+
+### 📊 Langfuse Tracing (`src/services/llm-tracing.ts`)
+- **Features**: Comprehensive LLM operation tracking, performance metrics
+- **Traces**: Script generation, image analysis, template processing, provider usage
+- **Analytics**: Token usage, response times, success rates, error tracking
+
+### 📋 Template System (`src/templates/prompts/`)
+- **Approach**: File-based templates (no KV storage dependency)
+- **Engine**: Handlebars-style template rendering
+- **Templates**: Gen-Z Tech in Asia video script generation prompt
+- **Features**: Conditional blocks, variable substitution, custom instructions
 
 ## Best Practices
 

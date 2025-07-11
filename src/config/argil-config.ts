@@ -41,6 +41,12 @@ export interface ArgilDefaultsConfig {
     volume: number
   }
   quality: 'high' | 'medium' | 'low'
+  speedAdjustment: {
+    enabled: boolean
+    factor: number
+    preservePitch: boolean
+  }
+  preferredVoiceId: string
 }
 
 export interface ArgilWebhookConfig {
@@ -141,7 +147,7 @@ export const DEFAULT_ARGIL_CONFIG: ArgilConfig = {
     estimated_cost_per_video: 0.1,
   },
   defaults: {
-    aspectRatio: '16:9',
+    aspectRatio: '9:16',
     subtitles: {
       enabled: true,
       language: 'en',
@@ -151,6 +157,12 @@ export const DEFAULT_ARGIL_CONFIG: ArgilConfig = {
       volume: 0.3,
     },
     quality: 'high',
+    speedAdjustment: {
+      enabled: true,
+      factor: 1.3, // Change this to any speed (1.0 = normal, 2.0 = 2x speed)
+      preservePitch: true,
+    },
+    preferredVoiceId: '6f3a01fb-6c2c-4c50-8689-34f364657d7c', // Anthea - Singapore
   },
   webhook: {
     endpoint: '/api/webhooks/argil',

@@ -85,7 +85,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
   // Initialize services and config
   const configManager = new ArgilConfigManager()
 
-  app.get('/api/argil/config', async (c) => {
+  app.get('/config', async (c) => {
     try {
       const config = configManager.getConfig()
 
@@ -110,7 +110,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.get('/api/argil/voices', async (c) => {
+  app.get('/voices', async (c) => {
     try {
       const argilService = new ArgilAvatarService(c.env)
       const result = await argilService.getVoices()
@@ -141,7 +141,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.get('/api/argil/avatars', async (c) => {
+  app.get('/avatars', async (c) => {
     try {
       const argilService = new ArgilAvatarService(c.env)
       const result = await argilService.getAvatars()
@@ -172,7 +172,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.post('/api/argil/generate/script', async (c) => {
+  app.post('/generate/script', async (c) => {
     try {
       // Cost management check
       if (!configManager.canMakeRequest()) {
@@ -211,10 +211,13 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
 
       // For now, we need word timings. In a real implementation,
       // this would come from previous TTS step
-      const mockWordTimings = [
-        { word: 'mock', startTime: 0, endTime: 0.5 },
-        { word: 'timing', startTime: 0.5, endTime: 1.0 },
-      ]
+      // Generate mock word timings based on the script
+      const words = validatedData.script.split(/\s+/)
+      const mockWordTimings = words.map((word, index) => ({
+        word: word.replace(/[^\w]/g, ''), // Remove punctuation
+        startTime: index * 0.5,
+        endTime: (index + 1) * 0.5,
+      })).filter(w => w.word.length > 0) // Remove empty words
 
       const result = await argilService.generateFromScript({
         script: validatedData.script,
@@ -268,7 +271,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.post('/api/argil/generate/audio', async (c) => {
+  app.post('/generate/audio', async (c) => {
     try {
       // Cost management check
       if (!configManager.canMakeRequest()) {
@@ -356,7 +359,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.post('/api/argil/workflow/full', async (c) => {
+  app.post('/workflow/full', async (c) => {
     try {
       // Cost management check
       if (!configManager.canMakeRequest()) {
@@ -480,7 +483,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.get('/api/argil/video/:videoId/status', async (c) => {
+  app.get('/video/:videoId/status', async (c) => {
     try {
       const videoId = c.req.param('videoId')
       if (!videoId) {
@@ -522,7 +525,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.post('/api/argil/video/:videoId/render', async (c) => {
+  app.post('/video/:videoId/render', async (c) => {
     try {
       const videoId = c.req.param('videoId')
       if (!videoId) {
@@ -564,7 +567,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.post('/api/webhooks/argil', async (c) => {
+  app.post('/webhooks/argil', async (c) => {
     try {
       const signature = c.req.header('x-argil-signature') || ''
       const body = await c.req.json()
@@ -611,7 +614,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.get('/api/argil/usage', async (c) => {
+  app.get('/usage', async (c) => {
     try {
       const argilService = new ArgilAvatarService(c.env)
       const usageMetrics = await argilService.getUsageMetrics()
@@ -636,7 +639,7 @@ export function createArgilHandlers(app: Hono<{ Bindings: Env }>) {
     }
   })
 
-  app.post('/api/argil/config/reset-session', async (c) => {
+  app.post('/config/reset-session', async (c) => {
     try {
       configManager.resetRequestCount()
 

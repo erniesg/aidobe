@@ -12,6 +12,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "test:critical": "vitest run tests/unit/",
+    "test:integration": "vitest run tests/integration/",
+    "test:pipeline": "vitest run tests/integration/article-to-video-pipeline.test.ts",
     "test:live": "./tests/e2e/live-api-test.sh",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write src/**/*.ts",
@@ -26,6 +28,7 @@
   },
   "dependencies": {
     "hono": "^4.0.0",
+    "langfuse": "^3.38.4",
     "zod": "^3.22.0"
   },
   "devDependencies": {

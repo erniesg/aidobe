@@ -17,10 +17,14 @@ import {
   extractSentenceBoundaries
 } from '../schemas/audio'
 
-interface AudioProvider {
+interface TTSProvider {
   name: string
-  generateTTS?(request: TTSGenerationRequest): Promise<AudioFile>
-  transcribe?(audioUrl: string): Promise<Transcription>
+  generateTTS(request: TTSGenerationRequest): Promise<AudioFile>
+}
+
+interface TranscriptionProvider {
+  name: string
+  transcribe(audioUrl: string): Promise<Transcription>
 }
 
 interface MusicProvider {
@@ -61,7 +65,8 @@ interface AudioResult<T> {
  * Handles voice synthesis, background music selection, and final audio assembly
  */
 export class AudioProcessingService {
-  private ttsProviders = new Map<string, AudioProvider>()
+  private ttsProviders = new Map<string, TTSProvider>()
+  private transcriptionProviders = new Map<string, TranscriptionProvider>()
   private musicProviders = new Map<string, MusicProvider>()
   private cache = new Map<string, { data: any; expiry: number }>()
   private readonly CACHE_TTL = 30 * 60 * 1000 // 30 minutes
@@ -96,7 +101,7 @@ export class AudioProcessingService {
 
       // Select TTS provider based on preferences
       const provider = this.selectTTSProvider(request.voicePreferences?.provider)
-      if (!provider || !provider.generateTTS) {
+      if (!provider) {
         return {
           success: false,
           error: 'No TTS provider available',
@@ -328,7 +333,7 @@ export class AudioProcessingService {
     try {
       // Select transcription provider
       const selectedProvider = this.selectTranscriptionProvider(provider)
-      if (!selectedProvider || !selectedProvider.transcribe) {
+      if (!selectedProvider) {
         return {
           success: false,
           error: 'No transcription provider available',
@@ -386,6 +391,7 @@ export class AudioProcessingService {
    */
   private initializeProviders(): void {
     // Initialize TTS providers
+    // Initialize TTS providers
     this.ttsProviders.set('openai', {
       name: 'OpenAI TTS',
       generateTTS: async (request: TTSGenerationRequest): Promise<AudioFile> => {
@@ -397,9 +403,14 @@ export class AudioProcessingService {
       name: 'ElevenLabs',
       generateTTS: async (request: TTSGenerationRequest): Promise<AudioFile> => {
         return this.createMockAudioFile('elevenlabs', request)
-      },
+      }
+    })
+
+    // Initialize transcription providers (STT)
+    this.transcriptionProviders.set('whisper', {
+      name: 'Local Whisper',
       transcribe: async (audioUrl: string): Promise<Transcription> => {
-        return this.createMockTranscription(audioUrl)
+        return this.createMockTranscription(audioUrl, 'whisper')
       }
     })
 
@@ -499,7 +510,7 @@ export class AudioProcessingService {
   /**
    * Create mock transcription
    */
-  private createMockTranscription(audioUrl: string): Transcription {
+  private createMockTranscription(audioUrl: string, provider: string = 'local_whisper'): Transcription {
     const mockText = "This is a mock transcription of the audio file."
     const words = mockText.split(' ')
     const wordTimings: WordTiming[] = words.map((word, index) => ({
@@ -516,7 +527,7 @@ export class AudioProcessingService {
       wordTimings,
       confidence: 0.95,
       language: 'en',
-      provider: 'openai_whisper',
+      provider: provider,
       sentences: [],
       transcribedAt: new Date().toISOString(),
       processingTime: 1000 + Math.random() * 2000,
@@ -578,7 +589,7 @@ export class AudioProcessingService {
     return moodEnergy[mood] || 0.5
   }
 
-  private selectTTSProvider(preferredProvider?: string): AudioProvider | null {
+  private selectTTSProvider(preferredProvider?: string): TTSProvider | null {
     if (preferredProvider && this.ttsProviders.has(preferredProvider)) {
       return this.ttsProviders.get(preferredProvider)!
     }
@@ -592,20 +603,16 @@ export class AudioProcessingService {
     return Array.from(this.ttsProviders.values())[0] || null
   }
 
-  private selectTranscriptionProvider(preferredProvider?: string): AudioProvider | null {
-    if (preferredProvider && this.ttsProviders.has(preferredProvider)) {
-      const provider = this.ttsProviders.get(preferredProvider)!
-      if (provider.transcribe) return provider
+  private selectTranscriptionProvider(preferredProvider?: string): TranscriptionProvider | null {
+    // Always prefer local Whisper for transcription
+    const whisperProvider = this.transcriptionProviders.get('whisper')
+    if (whisperProvider) {
+      return whisperProvider
     }
     
-    // If preferred provider is specified but doesn't exist or support transcription, return null
-    if (preferredProvider) {
-      return null
-    }
-    
-    // Find any provider with transcription capability
-    for (const provider of this.ttsProviders.values()) {
-      if (provider.transcribe) return provider
+    // Fallback: find any available transcription provider
+    for (const provider of this.transcriptionProviders.values()) {
+      return provider
     }
     
     return null
@@ -756,9 +763,11 @@ export class AudioProcessingService {
   } {
     return {
       ttsProvidersCount: this.ttsProviders.size,
+      transcriptionProvidersCount: this.transcriptionProviders.size,
       musicProvidersCount: this.musicProviders.size,
       cacheSize: this.cache.size,
       ttsProviders: Array.from(this.ttsProviders.keys()),
+      transcriptionProviders: Array.from(this.transcriptionProviders.keys()),
       musicProviders: Array.from(this.musicProviders.keys())
     }
   }

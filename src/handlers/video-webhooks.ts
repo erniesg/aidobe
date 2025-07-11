@@ -19,7 +19,7 @@ const ModalProgressUpdateSchema = z.object({
 
 const ModalCompletionSchema = z.object({
   job_id: z.string().uuid(),
-  status: z.enum(['completed', 'failed', 'cancelled']),
+  status: z.enum(['completed', 'failed']),
   output_url: z.string().url().optional(),
   error: z.string().optional(),
   metadata: z.object({

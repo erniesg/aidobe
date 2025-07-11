@@ -479,6 +479,68 @@ export class ArgilAvatarService {
   }
 
   /**
+   * Return mock response for testing
+   */
+  private getMockResponse(endpoint: string, data: any, method: string): ArgilResult<any> {
+    if (endpoint.includes('/videos') && method === 'POST') {
+      return {
+        success: true,
+        data: {
+          id: 'mock-video-id-' + Date.now(),
+          name: data?.name || 'Mock Video',
+          status: 'IDLE',
+          moments: data?.moments || [],
+          aspectRatio: data?.aspectRatio || '9:16',
+          subtitles: data?.subtitles || { enabled: true, language: 'en' },
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        metadata: {
+          executionTime: 100,
+        },
+      }
+    }
+    
+    if (endpoint.includes('/videos/') && endpoint.includes('/render')) {
+      return {
+        success: true,
+        data: {
+          id: endpoint.split('/')[2],
+          status: 'GENERATING_VIDEO',
+          progress: 0,
+        },
+        metadata: {
+          executionTime: 50,
+        },
+      }
+    }
+    
+    if (endpoint.includes('/videos/') && method === 'GET') {
+      return {
+        success: true,
+        data: {
+          id: endpoint.split('/')[2],
+          status: 'DONE',
+          videoUrl: 'https://mock-argil.com/video/test.mp4',
+          progress: 100,
+        },
+        metadata: {
+          executionTime: 30,
+        },
+      }
+    }
+    
+    // Default mock response
+    return {
+      success: true,
+      data: {},
+      metadata: {
+        executionTime: 10,
+      },
+    }
+  }
+
+  /**
    * Make API request to Argil with retry logic
    */
   private async makeArgilRequest(
@@ -486,6 +548,11 @@ export class ArgilAvatarService {
     data: any,
     method: string = 'POST'
   ): Promise<ArgilResult<any>> {
+    // If no API key provided, return mock data
+    if (!this.env.ARGIL_API_KEY) {
+      return this.getMockResponse(endpoint, data, method)
+    }
+    
     // Ensure endpoint starts with /v1/ for the real API
     const normalizedEndpoint = endpoint.startsWith('/v1/') ? endpoint : `/v1${endpoint}`
     const url = `${this.apiUrl}${normalizedEndpoint}`
@@ -574,7 +641,7 @@ export class ArgilAvatarService {
     }
 
     // For testing, accept standard avatar IDs without API call
-    if (['avatar-1', 'avatar-2'].includes(avatarId)) {
+    if (['avatar-1', 'avatar-2', 'avatar-professional', 'avatar-casual'].includes(avatarId)) {
       return {
         success: true,
         data: true,

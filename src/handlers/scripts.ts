@@ -2,7 +2,12 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import type { Env } from '../types/env'
 import { ScriptGenerationService } from '../services/script-generation'
+import { ScenePlanningService } from '../services/scene-planning'
 import { ConfigurationService } from '../services/config'
+import { OpenAIService } from '../services/openai'
+import { MultiProviderLLMService, type LLMProvider } from '../services/multi-provider-llm'
+import { createLLMTracingService, type LLMTracingService } from '../services/llm-tracing'
+import { createAlgoliaService, type AlgoliaService } from '../services/algolia'
 import {
   type GenerateScriptRequest,
   type EditScriptRequest,
@@ -12,6 +17,11 @@ import {
   StructuredScriptGenerationRequestSchema
 } from '../schemas/script'
 import { type Article, ArticleSchema } from '../schemas/job'
+import {
+  ScenePlanningRequestSchema,
+  type ScenePlanningRequest,
+  type WanxScript
+} from '../schemas/scene-planning'
 
 // Request schemas for API endpoints
 const ParseArticlesRequestSchema = z.object({
@@ -36,16 +46,24 @@ const ApiResponseSchema = z.object({
 
 export class ScriptHandlers {
   private scriptService: ScriptGenerationService
+  private scenePlanningService: ScenePlanningService
   private configService: ConfigurationService
+  private llmTracingService: LLMTracingService
+  private algoliaService: AlgoliaService
+  private llmProvider: any
+  private multiProviderLLM: MultiProviderLLMService
 
   constructor(private env: Env) {
     this.configService = new ConfigurationService(env)
     
-    // Initialize with mock LLM provider for now
-    const mockLLMProvider = {
+    // Initialize multi-provider LLM service
+    this.multiProviderLLM = new MultiProviderLLMService(env)
+    
+    // Keep backward compatibility with existing OpenAI service
+    const openaiService = new OpenAIService(env.OPENAI_API_KEY)
+    this.llmProvider = {
       generateText: async (prompt: string, options?: any) => {
-        // This would be replaced with actual OpenAI/Anthropic integration
-        return 'Mock LLM response'
+        return await openaiService.generateText(prompt, options)
       }
     }
     
@@ -66,7 +84,72 @@ export class ScriptHandlers {
       }
     }
     
-    this.scriptService = new ScriptGenerationService(env, mockLLMProvider, configServiceAdapter)
+    this.scriptService = new ScriptGenerationService(env, this.llmProvider, configServiceAdapter)
+    this.scenePlanningService = new ScenePlanningService(env)
+    this.llmTracingService = createLLMTracingService(env)
+    this.algoliaService = createAlgoliaService(env)
+  }
+
+  /**
+   * Load prompt template from file (proper approach like wanx)
+   */
+  private async loadPromptTemplate(templateName: string): Promise<string> {
+    try {
+      if (templateName === 'video-script-generation') {
+        // Read template from R2 storage or file system
+        // For now, we'll fetch it from the template file we created
+        try {
+          // In production, this would read from R2 bucket
+          const response = await fetch(`/templates/prompts/${templateName}.md`)
+          if (response.ok) {
+            return await response.text()
+          }
+        } catch {
+          // Fallback: use template service to get the template
+          const templateResult = await this.configService.getPromptTemplate('video', 'script-generation')
+          if (templateResult.data) {
+            return templateResult.data.content || templateResult.data
+          }
+        }
+        
+        throw new Error(`Template ${templateName} not found`)
+      }
+      
+      return ''
+    } catch (error) {
+      console.error(`Failed to load template ${templateName}:`, error)
+      throw new Error(`Template ${templateName} not found`)
+    }
+  }
+
+
+  /**
+   * Simple template rendering (replace {{variable}} with values)
+   */
+  private renderTemplate(template: string, variables: Record<string, any>): string {
+    let rendered = template
+    
+    // Replace simple variables {{variable}}
+    Object.entries(variables).forEach(([key, value]) => {
+      const regex = new RegExp(`{{${key}}}`, 'g')
+      rendered = rendered.replace(regex, String(value || ''))
+    })
+    
+    // Handle conditional blocks {{#if customInstructions}}...{{/if}}
+    if (variables.customInstructions && variables.customInstructions.trim()) {
+      rendered = rendered.replace(/{{#if customInstructions}}(.*?){{\/if}}/gs, '$1')
+    } else {
+      rendered = rendered.replace(/{{#if customInstructions}}(.*?){{\/if}}/gs, '')
+    }
+    
+    // Handle conditional blocks {{#if imageDescription}}...{{/if}}
+    if (variables.imageDescription && variables.imageDescription.trim()) {
+      rendered = rendered.replace(/{{#if imageDescription}}(.*?){{\/if}}/gs, '$1')
+    } else {
+      rendered = rendered.replace(/{{#if imageDescription}}(.*?){{\/if}}/gs, '')
+    }
+    
+    return rendered
   }
 
   /**
@@ -84,8 +167,33 @@ export class ScriptHandlers {
 
       console.log(`[${requestId}] Parsing ${validatedRequest.articles.length} articles`)
 
+      // Start tracing pipeline
+      const trace = await this.llmTracingService.startVideoScriptTrace({
+        articleTitle: validatedRequest.articles[0]?.title || 'Multiple Articles',
+        articleContent: validatedRequest.articles[0]?.content || '',
+        userId: c.req.header('User-ID'),
+        jobId: validatedRequest.jobId || requestId
+      })
+
       // Process articles
       const parsedArticles = await this.scriptService.parseArticles(validatedRequest.articles)
+
+      // Trace the parsing step
+      await this.llmTracingService.traceLLMCall(trace, {
+        provider: 'internal',
+        model: 'article-parser',
+        prompt: `Parse ${validatedRequest.articles.length} articles`,
+        maxTokens: 0,
+        temperature: 0,
+        structuredOutput: false,
+        hasImage: false,
+        hasCustomInstructions: false,
+        startTime
+      }, {
+        content: JSON.stringify(parsedArticles),
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        success: true
+      })
 
       const response = {
         success: true,
@@ -96,13 +204,15 @@ export class ScriptHandlers {
             successfullyParsed: parsedArticles.length,
             processingTime: Date.now() - startTime,
             averageTikTokPotential: parsedArticles.reduce((sum, article) => sum + article.tiktokPotential, 0) / parsedArticles.length
-          }
+          },
+          traceId: trace?.id // Include trace ID for debugging
         },
         timestamp: new Date().toISOString(),
         requestId
       }
 
       console.log(`[${requestId}] Successfully parsed articles in ${Date.now() - startTime}ms`)
+      await this.llmTracingService.flush()
       return c.json(response, 200)
 
     } catch (error) {
@@ -504,6 +614,421 @@ export class ScriptHandlers {
       }, 503)
     }
   }
+
+  /**
+   * POST /api/scripts/generate-video-script
+   * Generate wanx-style video script from article content with optional image input
+   */
+  async generateVideoScript(c: any): Promise<Response> {
+    const requestId = crypto.randomUUID()
+    const startTime = Date.now()
+
+    try {
+      // Input validation - support both direct content and Algolia article ID
+      const body = await c.req.json()
+      const validatedRequest = z.object({
+        // Either provide title/content directly OR algolia object ID
+        title: z.string().min(1).optional(),
+        content: z.string().min(10).optional(),
+        algoliaObjectId: z.string().optional(), // Auto-fetch from Algolia
+        
+        duration: z.number().min(15).max(120).default(60),
+        customInstructions: z.string().optional(), // Optional custom instructions
+        // Image support (optional)
+        image: z.object({
+          data: z.string(), // base64 encoded image or URL
+          mimeType: z.string(), // e.g., 'image/jpeg', 'image/png'
+          type: z.enum(['base64', 'url']).default('base64')
+        }).optional(),
+        // Provider selection
+        llmProvider: z.enum(['openai', 'anthropic', 'google']).default('openai'),
+        model: z.string().optional()
+      }).refine(
+        (data) => (data.title && data.content) || data.algoliaObjectId,
+        {
+          message: "Either provide title/content directly or algoliaObjectId to fetch from Algolia",
+          path: ["title", "content", "algoliaObjectId"]
+        }
+      ).parse(body)
+
+      // Extract title and content from Algolia if object ID provided
+      let finalTitle = validatedRequest.title
+      let finalContent = validatedRequest.content
+      let articleMetadata: any = null
+
+      if (validatedRequest.algoliaObjectId) {
+        console.log(`[${requestId}] Fetching article from Algolia: ${validatedRequest.algoliaObjectId}`)
+        
+        const article = await this.algoliaService.getArticleById(validatedRequest.algoliaObjectId)
+        
+        if (!article) {
+          return c.json({
+            success: false,
+            error: `Article not found in Algolia: ${validatedRequest.algoliaObjectId}`,
+            requestId
+          }, 404)
+        }
+
+        finalTitle = article.title
+        finalContent = article.content
+        articleMetadata = {
+          objectId: article.objectID,
+          author: article.author,
+          publishedAt: article.publishedAt,
+          url: article.url,
+          tags: article.tags,
+          category: article.category,
+          readingTime: article.readingTime
+        }
+
+        console.log(`[${requestId}] Fetched article: "${finalTitle}" (${finalContent.length} chars)`)
+      }
+
+      // Validate we have the required content
+      if (!finalTitle || !finalContent) {
+        return c.json({
+          success: false,
+          error: 'Title and content are required (either directly or from Algolia article)',
+          requestId
+        }, 400)
+      }
+
+      if (finalContent.length < 10) {
+        return c.json({
+          success: false,
+          error: 'Article content too short for video script generation',
+          requestId
+        }, 400)
+      }
+
+      // Start LLM tracing
+      const trace = await this.llmTracingService.startVideoScriptTrace({
+        title: finalTitle,
+        content: finalContent,
+        duration: validatedRequest.duration,
+        provider: validatedRequest.llmProvider,
+        requestId
+      })
+
+      console.log(`[${requestId}] Generating video script for: "${finalTitle}" using ${validatedRequest.llmProvider}${validatedRequest.algoliaObjectId ? ` (from Algolia: ${validatedRequest.algoliaObjectId})` : ''}`)
+
+      // Load prompt template
+      const templateStartTime = Date.now()
+      const promptTemplate = await this.loadPromptTemplate('video-script-generation')
+      
+      // Generate image description if image is provided
+      let imageDescription = ''
+      if (validatedRequest.image) {
+        try {
+          const imageStartTime = Date.now()
+          const imageAnalysis = await this.multiProviderLLM.generateWithImage(
+            'Describe this image in detail. Focus on key visual elements, people, objects, text, charts, or any relevant information that could help create a compelling video script.',
+            validatedRequest.image.data,
+            validatedRequest.image.mimeType,
+            {
+              provider: validatedRequest.llmProvider,
+              maxTokens: 300
+            }
+          )
+          imageDescription = imageAnalysis.content
+          
+          // Trace image analysis
+          await this.llmTracingService.traceImageAnalysis(trace, {
+            provider: validatedRequest.llmProvider,
+            imageType: validatedRequest.image.mimeType,
+            imageSize: validatedRequest.image.data.length,
+            prompt: 'Describe this image in detail...',
+            startTime: imageStartTime
+          }, {
+            description: imageDescription,
+            success: true
+          })
+        } catch (error) {
+          console.warn(`[${requestId}] Failed to analyze image:`, error)
+          
+          // Trace image analysis error
+          await this.llmTracingService.traceImageAnalysis(trace, {
+            provider: validatedRequest.llmProvider,
+            imageType: validatedRequest.image.mimeType,
+            imageSize: validatedRequest.image.data.length,
+            prompt: 'Describe this image in detail...',
+            startTime: Date.now()
+          }, {
+            description: '',
+            success: false,
+            error: error instanceof Error ? error.message : 'Image analysis failed'
+          })
+        }
+      }
+      
+      // Render template with variables including image description
+      const userPrompt = this.renderTemplate(promptTemplate, {
+        title: finalTitle,
+        content: finalContent,
+        duration: validatedRequest.duration.toString(),
+        customInstructions: validatedRequest.customInstructions || '',
+        imageDescription
+      })
+
+      // Trace template processing
+      await this.llmTracingService.traceTemplateProcessing(trace, {
+        templateName: 'video-script-generation',
+        templateLength: promptTemplate.length,
+        variables: {
+          title: finalTitle,
+          content: finalContent,
+          duration: validatedRequest.duration.toString(),
+          customInstructions: validatedRequest.customInstructions || '',
+          imageDescription
+        },
+        startTime: templateStartTime
+      }, {
+        renderedPrompt: userPrompt,
+        success: true
+      })
+
+      // Generate script using multi-provider LLM with structured output
+      const llmRequestParams = {
+        messages: [{
+          role: 'user' as const,
+          content: userPrompt
+        }],
+        provider: validatedRequest.llmProvider,
+        model: validatedRequest.model,
+        maxTokens: 1500,
+        temperature: 0.8,
+        structuredOutput: true, // Enable structured JSON output
+        responseFormat: 'json_object' // Ensure JSON response
+      }
+
+      const llmStartTime = Date.now()
+      const scriptResponse = await this.multiProviderLLM.generateText(llmRequestParams)
+
+      // Trace the LLM generation
+      await this.llmTracingService.traceLLMCall(trace, {
+        provider: validatedRequest.llmProvider,
+        model: validatedRequest.model || scriptResponse.model,
+        prompt: userPrompt,
+        maxTokens: llmRequestParams.maxTokens,
+        temperature: llmRequestParams.temperature,
+        structuredOutput: llmRequestParams.structuredOutput,
+        hasImage: !!validatedRequest.image,
+        hasCustomInstructions: !!validatedRequest.customInstructions,
+        startTime: llmStartTime
+      }, {
+        content: scriptResponse.content,
+        usage: scriptResponse.usage,
+        success: true
+      })
+
+      // Parse the JSON response from LLM
+      let videoScript
+      try {
+        // Parse structured JSON response (should be clean JSON with structured output)
+        videoScript = JSON.parse(scriptResponse.content)
+        
+        // Validate it has the required structure
+        if (!videoScript.video_structure || !videoScript.script_segments) {
+          throw new Error('Invalid script structure')
+        }
+        
+        console.log(`[${requestId}] Successfully parsed structured script from ${validatedRequest.llmProvider}`)
+      } catch (error) {
+        console.warn(`[${requestId}] Failed to parse LLM JSON response, using fallback structure:`, error)
+        
+        // Trace the parsing error
+        await this.llmTracingService.recordParsingError(trace, {
+          provider: validatedRequest.llmProvider,
+          model: validatedRequest.model || scriptResponse.model,
+          prompt: userPrompt,
+          maxTokens: llmRequestParams.maxTokens,
+          temperature: llmRequestParams.temperature,
+          structuredOutput: llmRequestParams.structuredOutput,
+          hasImage: !!validatedRequest.image,
+          hasCustomInstructions: !!validatedRequest.customInstructions,
+          startTime: llmStartTime
+        }, scriptResponse.content, error instanceof Error ? error : new Error('Parsing failed'))
+        
+        // Fallback: create structured output from raw response
+        videoScript = {
+          video_structure: {
+            title: finalTitle,
+            throughline: "Generated from article content with structured analysis",
+            duration: validatedRequest.duration.toString(),
+            target_audience: "Tech professionals and content creators"
+          },
+          script_segments: {
+            hook: {
+              order_id: 1,
+              voiceover: scriptResponse.content.substring(0, 100) + "...",
+              visual_direction: "Dynamic opening visuals related to the article topic",
+              b_roll_keywords: ["tech news", "article topic", "attention grabbing"]
+            },
+            conflict: {
+              order_id: 2,
+              voiceover: "This development creates significant challenges and opportunities",
+              visual_direction: "Show tension or problem visualization",
+              b_roll_keywords: ["challenges", "problem", "tech drama"]
+            },
+            body: {
+              order_id: 3,
+              voiceover: scriptResponse.content.substring(100, 400) + "...",
+              visual_direction: "Cut between relevant footage and explanatory graphics",
+              b_roll_keywords: ["tech innovation", "analysis", "detailed footage"]
+            },
+            conclusion: {
+              order_id: 4,
+              voiceover: "What do you think about this development?",
+              visual_direction: "Tech in Asia logo with subscribe prompt",
+              b_roll_keywords: ["conclusion", "call to action"]
+            }
+          },
+          production_notes: {
+            music_vibe: "engaging, tech-focused, conversational",
+            overall_tone: "Gen-Z Tech in Asia journalist style"
+          }
+        }
+      }
+
+      // Add metadata
+      const result = {
+        id: requestId,
+        script: videoScript,
+        metadata: {
+          generatedAt: new Date().toISOString(),
+          executionTime: Date.now() - startTime,
+          provider: validatedRequest.llmProvider,
+          model: validatedRequest.model || scriptResponse.model,
+          promptLength: userPrompt.length,
+          responseLength: scriptResponse.content.length,
+          usage: scriptResponse.usage,
+          hasImage: !!validatedRequest.image,
+          hasCustomInstructions: !!validatedRequest.customInstructions,
+          ...(articleMetadata && { 
+            sourceArticle: {
+              ...articleMetadata,
+              fetchedFromAlgolia: true
+            }
+          })
+        }
+      }
+
+      // Update trace with final output
+      await this.llmTracingService.updateTraceWithResults(trace, {
+        script: videoScript,
+        success: true,
+        title: videoScript.video_structure?.title,
+        segments: Object.keys(videoScript.script_segments || {}),
+        duration: videoScript.video_structure?.duration
+      }, {
+        totalProcessingTime: Date.now() - startTime,
+        providerUsed: validatedRequest.llmProvider,
+        modelUsed: result.metadata.model,
+        tokenUsage: result.metadata.usage
+      })
+      
+      // Flush trace data
+      await this.llmTracingService.flush()
+
+      console.log(`[${requestId}] Video script generated successfully in ${Date.now() - startTime}ms`)
+
+      return c.json({
+        success: true,
+        data: result
+      })
+
+    } catch (error) {
+      console.error(`[${requestId}] Video script generation failed:`, error)
+      
+      // Update trace with error if trace exists
+      if (trace) {
+        await this.llmTracingService.updateTraceWithResults(trace, {
+          script: null,
+          success: false,
+          error: error instanceof Error ? error.message : 'Video script generation failed'
+        }, {
+          totalProcessingTime: Date.now() - startTime,
+          providerUsed: (validatedRequest as any)?.llmProvider || 'unknown',
+          modelUsed: 'unknown'
+        })
+      }
+      
+      // Flush trace data
+      await this.llmTracingService.flush()
+      
+      return c.json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Video script generation failed',
+        requestId
+      }, 500)
+    }
+  }
+
+  /**
+   * POST /api/scripts/plan-scenes
+   * Break down video script into timed scenes with asset suggestions
+   */
+  async planScenes(c: any): Promise<Response> {
+    const requestId = crypto.randomUUID()
+    const startTime = Date.now()
+
+    try {
+      // Input validation using proper schemas
+      const body = await c.req.json()
+      const validatedRequest = ScenePlanningRequestSchema.parse(body)
+
+      console.log(`[${requestId}] Planning scenes for script: ${validatedRequest.script.video_structure.title}`)
+
+      // Generate scene plan using dedicated service
+      const scenePlan = await this.scenePlanningService.generateScenePlan(
+        validatedRequest.script,
+        validatedRequest.transcription,
+        validatedRequest.preferences
+      )
+
+      const response = {
+        success: true,
+        data: {
+          scenePlan,
+          summary: {
+            totalScenes: scenePlan.scenes.length,
+            totalDuration: scenePlan.totalDuration,
+            averageSceneDuration: scenePlan.totalDuration / scenePlan.scenes.length,
+            processingTime: Date.now() - startTime
+          }
+        },
+        timestamp: new Date().toISOString(),
+        requestId
+      }
+
+      console.log(`[${requestId}] Generated scene plan with ${scenePlan.scenes.length} scenes in ${Date.now() - startTime}ms`)
+      return c.json(response, 200)
+
+    } catch (error) {
+      console.error(`[${requestId}] Scene planning failed:`, error)
+
+      if (error instanceof z.ZodError) {
+        return c.json({
+          success: false,
+          error: 'Invalid request format',
+          details: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message
+          })),
+          timestamp: new Date().toISOString(),
+          requestId
+        }, 400)
+      }
+
+      return c.json({
+        success: false,
+        error: error instanceof Error ? error.message : 'Scene planning failed',
+        timestamp: new Date().toISOString(),
+        requestId
+      }, 500)
+    }
+  }
+
 }
 
 /**
@@ -541,6 +1066,16 @@ export function createScriptRoutes(env: Env): Hono {
   // Extract scenes endpoint
   app.post('/extract-scenes', async (c) => {
     return handlers.extractScenes(c)
+  })
+
+  // Generate video script from article content
+  app.post('/generate-video-script', async (c) => {
+    return handlers.generateVideoScript(c)
+  })
+
+  // Plan scenes from script with timing extraction
+  app.post('/plan-scenes', async (c) => {
+    return handlers.planScenes(c)
   })
 
   // Health check endpoint

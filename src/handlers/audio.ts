@@ -26,14 +26,15 @@ const AudioMixRequestSchema = z.object({
 })
 
 const TranscriptionRequestSchema = z.object({
-  audioFileId: z.string().uuid(),
+  audioFileId: z.string().uuid().optional(),
+  audioUrl: z.string().url().optional(),
   options: z.object({
     language: z.string().default('en'),
-    provider: z.enum(['openai_whisper', 'google_speech', 'azure_speech']).optional(),
+    provider: z.enum(['whisper']).default('whisper'),
     includeWordTimings: z.boolean().default(true),
     enhanceAccuracy: z.boolean().default(false)
   }).optional()
-})
+}).refine(data => data.audioFileId || data.audioUrl, 'Either audioFileId or audioUrl must be provided')
 
 const VoiceCloneRequestSchema = z.object({
   sourceAudioUrl: z.string().url(),
@@ -329,41 +330,38 @@ export class AudioHandlers {
       const body = await c.req.json()
       const validatedRequest = TranscriptionRequestSchema.parse(body)
 
-      console.log(`[${requestId}] Transcribing audio ${validatedRequest.audioFileId}`)
+      const audioSource = validatedRequest.audioFileId || validatedRequest.audioUrl
+      console.log(`[${requestId}] Transcribing audio ${audioSource}`)
 
-      // This would typically call a transcription service
-      // For now, we'll return a mock transcription
-      const mockTranscription = {
-        id: crypto.randomUUID(),
-        audioFileId: validatedRequest.audioFileId,
-        fullText: 'Mock transcription text would appear here',
-        wordTimings: [
-          { word: 'Mock', startTime: 0, endTime: 0.5, confidence: 0.95 },
-          { word: 'transcription', startTime: 0.5, endTime: 1.2, confidence: 0.92 },
-          { word: 'text', startTime: 1.2, endTime: 1.6, confidence: 0.94 }
-        ],
-        confidence: 0.94,
-        language: validatedRequest.options?.language || 'en',
-        provider: validatedRequest.options?.provider || 'openai_whisper',
-        transcribedAt: new Date().toISOString(),
-        processingTime: Date.now() - startTime,
-        validation: {
-          hasErrors: false,
-          errorDetails: []
-        }
+      // Use the audio processing service for transcription
+      const transcriptionResult = await this.audioService.transcribeAudio(
+        validatedRequest.audioUrl || `https://mock-storage.com/audio/${validatedRequest.audioFileId}.mp3`,
+        validatedRequest.options?.provider
+      )
+
+      if (!transcriptionResult.success) {
+        return c.json({
+          success: false,
+          error: transcriptionResult.error || 'Transcription failed',
+          timestamp: new Date().toISOString(),
+          requestId
+        }, 500)
       }
+
+      const transcription = transcriptionResult.data!
 
       const response = {
         success: true,
         data: {
-          transcription: mockTranscription,
+          transcription,
           summary: {
             audioFileId: validatedRequest.audioFileId,
-            textLength: mockTranscription.fullText.length,
-            wordCount: mockTranscription.wordTimings.length,
-            confidence: mockTranscription.confidence,
-            language: mockTranscription.language,
-            provider: mockTranscription.provider,
+            audioUrl: validatedRequest.audioUrl,
+            textLength: transcription.fullText.length,
+            wordCount: transcription.wordTimings.length,
+            confidence: transcription.confidence,
+            language: transcription.language,
+            provider: transcription.provider,
             processingTime: Date.now() - startTime
           }
         },
@@ -371,7 +369,7 @@ export class AudioHandlers {
         requestId
       }
 
-      console.log(`[${requestId}] Transcribed audio (${mockTranscription.wordTimings.length} words) in ${Date.now() - startTime}ms`)
+      console.log(`[${requestId}] Transcribed audio (${transcription.wordTimings.length} words) in ${Date.now() - startTime}ms`)
       return c.json(response, 200)
 
     } catch (error) {

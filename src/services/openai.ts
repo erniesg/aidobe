@@ -1,15 +1,13 @@
 import { z } from 'zod'
 
 export const ImageGenerationParamsSchema = z.object({
-  model: z.enum(['dall-e-2', 'dall-e-3', 'gpt-image-1']).default('gpt-image-1'),
+  model: z.enum(['gpt-image-1']).default('gpt-image-1'),
   size: z.enum(['1024x1024', '1024x1536', '1536x1024', 'auto']).default('1024x1536'), // GPT-Image-1 sizes - default to vertical
   quality: z.enum(['low', 'medium', 'high', 'auto']).default('high'), // GPT-Image-1 quality values
   style: z.enum(['vivid', 'natural']).optional(),
   n: z.number().int().min(1).max(10).default(1),
   // GPT-Image-1 specific parameters
-  moderation: z.enum(['default', 'strict', 'relaxed']).optional(),
-  // Note: response_format not supported by gpt-image-1, only by DALL-E models
-  response_format: z.enum(['url', 'b64_json']).optional()
+  moderation: z.enum(['default', 'strict', 'relaxed']).optional()
 })
 
 export type ImageGenerationParams = z.infer<typeof ImageGenerationParamsSchema>
@@ -22,6 +20,37 @@ export class OpenAIService {
     console.log('DEBUG: OpenAI constructor - apiKey exists?', !!apiKey)
     console.log('DEBUG: OpenAI constructor - apiKey length:', apiKey?.length)
     this.apiKey = apiKey
+  }
+
+  async generateText(prompt: string, options?: any): Promise<string> {
+    const model = options?.model || 'gpt-4o-mini'
+    const maxTokens = options?.maxTokens || 1000
+    const temperature = options?.temperature || 0.7
+
+    const requestBody = {
+      model,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: maxTokens,
+      temperature
+    }
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    })
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data.choices[0]?.message?.content || ''
   }
 
   async generateImage(prompt: string, params: ImageGenerationParams) {
@@ -41,17 +70,10 @@ export class OpenAIService {
       n: params.n
     }
 
-    // Add model-specific parameters
-    if (isGptImage) {
-      if (params.quality) requestBody.quality = params.quality
-      if (params.moderation) requestBody.moderation = params.moderation
-      // Note: gpt-image-1 returns b64_json by default, no response_format parameter needed
-    } else {
-      // DALL-E specific parameters
-      if (params.quality) requestBody.quality = params.quality
-      if (params.style) requestBody.style = params.style
-      if (params.response_format) requestBody.response_format = params.response_format
-    }
+    // Add GPT-Image-1 specific parameters
+    if (params.quality) requestBody.quality = params.quality
+    if (params.moderation) requestBody.moderation = params.moderation
+    // Note: gpt-image-1 returns b64_json by default, no response_format parameter needed
 
     const fullUrl = `${this.baseUrl}/images/generations`
     console.log('DEBUG: Making request to:', fullUrl)

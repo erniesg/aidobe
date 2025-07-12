@@ -25,12 +25,19 @@ export interface LLMTraceOutput {
 }
 
 export interface VideoScriptGenerationInput {
-  title: string
-  content: string
+  articleTitle: string
+  articleContent: string
+  contentLength: number
   duration: number
-  provider: string
+  llmProvider: string
+  model?: string
+  customInstructions?: string
+  hasImage: boolean
+  algoliaObjectId?: string
   userId?: string
+  jobId?: string
   requestId: string
+  sourceArticle?: any
 }
 
 export interface VideoScriptGenerationOutput {
@@ -61,7 +68,15 @@ export class LLMTracingService {
   async startVideoScriptTrace(input: VideoScriptGenerationInput) {
     if (!this.isEnabled) return null
 
-    const trace = await this.tracingService.startVideoScriptGeneration(input)
+    // Map VideoScriptGenerationInput to the expected interface
+    const trace = await this.tracingService.startVideoScriptGeneration({
+      title: input.articleTitle,
+      content: input.articleContent,
+      duration: input.duration,
+      provider: input.llmProvider,
+      userId: input.userId,
+      requestId: input.requestId
+    })
     return trace
   }
 
@@ -89,7 +104,7 @@ export class LLMTracingService {
   ) {
     if (!this.isEnabled || !trace) return
 
-    trace.update({
+    await trace.update({
       output: {
         script: output.script,
         success: output.success,

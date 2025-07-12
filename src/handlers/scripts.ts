@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import type { Env } from '../types/env'
+import { parseJSONFromLLM } from '../utils/formatting'
 import { ScriptGenerationService } from '../services/script-generation'
 import { ScenePlanningService } from '../services/scene-planning'
 import { ConfigurationService } from '../services/config'
@@ -91,31 +92,23 @@ export class ScriptHandlers {
   }
 
   /**
-   * Load prompt template from file (proper approach like wanx)
+   * Load prompt template from R2 storage
    */
   private async loadPromptTemplate(templateName: string): Promise<string> {
     try {
       if (templateName === 'video-script-generation') {
-        // Read template from R2 storage or file system
-        // For now, we'll fetch it from the template file we created
-        try {
-          // In production, this would read from R2 bucket
-          const response = await fetch(`/templates/prompts/${templateName}.md`)
-          if (response.ok) {
-            return await response.text()
-          }
-        } catch {
-          // Fallback: use template service to get the template
-          const templateResult = await this.configService.getPromptTemplate('video', 'script-generation')
-          if (templateResult.data) {
-            return templateResult.data.content || templateResult.data
-          }
+        // Read template from R2 prompts bucket
+        const templatePath = `prompts/${templateName}.md`
+        
+        const templateObject = await this.env.R2_PROMPTS.get(templatePath)
+        if (templateObject) {
+          return await templateObject.text()
         }
         
-        throw new Error(`Template ${templateName} not found`)
+        throw new Error(`Template ${templateName} not found in R2 storage`)
       }
       
-      return ''
+      throw new Error(`Unknown template: ${templateName}`)
     } catch (error) {
       console.error(`Failed to load template ${templateName}:`, error)
       throw new Error(`Template ${templateName} not found`)
@@ -574,6 +567,7 @@ export class ScriptHandlers {
     }
   }
 
+
   /**
    * GET /api/scripts/health
    * Health check endpoint for script services
@@ -657,8 +651,6 @@ export class ScriptHandlers {
       let articleMetadata: any = null
 
       if (validatedRequest.algoliaObjectId) {
-        console.log(`[${requestId}] Fetching article from Algolia: ${validatedRequest.algoliaObjectId}`)
-        
         const article = await this.algoliaService.getArticleById(validatedRequest.algoliaObjectId)
         
         if (!article) {
@@ -681,7 +673,6 @@ export class ScriptHandlers {
           readingTime: article.readingTime
         }
 
-        console.log(`[${requestId}] Fetched article: "${finalTitle}" (${finalContent.length} chars)`)
       }
 
       // Validate we have the required content
@@ -701,16 +692,27 @@ export class ScriptHandlers {
         }, 400)
       }
 
-      // Start LLM tracing
+      // Start LLM tracing with comprehensive metadata
       const trace = await this.llmTracingService.startVideoScriptTrace({
-        title: finalTitle,
-        content: finalContent,
+        articleTitle: finalTitle,
+        articleContent: finalContent,
+        contentLength: finalContent.length,
         duration: validatedRequest.duration,
-        provider: validatedRequest.llmProvider,
-        requestId
+        llmProvider: validatedRequest.llmProvider,
+        model: validatedRequest.model,
+        customInstructions: validatedRequest.customInstructions,
+        hasImage: !!validatedRequest.image,
+        algoliaObjectId: validatedRequest.algoliaObjectId,
+        userId: c.req.header('User-ID'),
+        jobId: requestId,
+        requestId,
+        ...(articleMetadata && { 
+          sourceArticle: {
+            ...articleMetadata,
+            fetchedFromAlgolia: true
+          }
+        })
       })
-
-      console.log(`[${requestId}] Generating video script for: "${finalTitle}" using ${validatedRequest.llmProvider}${validatedRequest.algoliaObjectId ? ` (from Algolia: ${validatedRequest.algoliaObjectId})` : ''}`)
 
       // Load prompt template
       const templateStartTime = Date.now()
@@ -791,7 +793,10 @@ export class ScriptHandlers {
       const llmRequestParams = {
         messages: [{
           role: 'user' as const,
-          content: userPrompt
+          content: [{
+            type: 'text' as const,
+            text: userPrompt
+          }]
         }],
         provider: validatedRequest.llmProvider,
         model: validatedRequest.model,
@@ -824,17 +829,13 @@ export class ScriptHandlers {
       // Parse the JSON response from LLM
       let videoScript
       try {
-        // Parse structured JSON response (should be clean JSON with structured output)
-        videoScript = JSON.parse(scriptResponse.content)
+        videoScript = parseJSONFromLLM(scriptResponse.content)
         
         // Validate it has the required structure
         if (!videoScript.video_structure || !videoScript.script_segments) {
           throw new Error('Invalid script structure')
         }
-        
-        console.log(`[${requestId}] Successfully parsed structured script from ${validatedRequest.llmProvider}`)
       } catch (error) {
-        console.warn(`[${requestId}] Failed to parse LLM JSON response, using fallback structure:`, error)
         
         // Trace the parsing error
         await this.llmTracingService.recordParsingError(trace, {
@@ -930,7 +931,6 @@ export class ScriptHandlers {
       // Flush trace data
       await this.llmTracingService.flush()
 
-      console.log(`[${requestId}] Video script generated successfully in ${Date.now() - startTime}ms`)
 
       return c.json({
         success: true,

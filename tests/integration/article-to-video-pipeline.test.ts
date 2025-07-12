@@ -32,7 +32,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const response = await worker.fetch('/api/scripts/parse-articles', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -86,7 +86,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const response = await worker.fetch('/api/scripts/parse-articles', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ articles })
@@ -110,7 +110,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const parseResponse = await worker.fetch('/api/scripts/parse-articles', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -130,7 +130,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const scriptResponse = await worker.fetch('/api/scripts/generate-video-script', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -186,7 +186,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const response = await worker.fetch('/api/argil/generate/script', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -259,7 +259,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const transcribeResponse = await worker.fetch('/api/audio/transcribe', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -296,7 +296,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
         const response = await worker.fetch('/api/assets/search', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+            'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -334,7 +334,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const searchResponse = await worker.fetch('/api/assets/search', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -351,7 +351,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const evalResponse = await worker.fetch('/api/assets/evaluate', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -394,7 +394,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const response = await worker.fetch('/api/video/assemble-overlay', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -469,7 +469,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const jobResponse = await worker.fetch('/api/jobs/complete-workflow', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -531,7 +531,7 @@ describe('Article to Video Pipeline Integration Tests', () => {
       const response = await worker.fetch('/api/scripts/parse-articles', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD || 'DI3+@##AN@:rKEFi'}`,
+          'Authorization': `Bearer ${process.env.ACCESS_PASSWORD}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

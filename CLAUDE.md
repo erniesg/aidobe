@@ -624,6 +624,59 @@ class Logger {
 - **Abuse Prevention**: Monitor for misuse patterns
 - **Reporting**: Mechanisms for reporting inappropriate content
 
+### 4. **Security Best Practices**
+
+#### **🚨 CRITICAL: Never Hardcode Secrets**
+- **NEVER** include API keys, passwords, or tokens in source code
+- **NEVER** use hardcoded fallback values for sensitive credentials
+- **NEVER** commit secrets to version control
+- **ALWAYS** use environment variables or secure secret management
+
+#### **Examples of What NOT to Do:**
+```typescript
+// ❌ NEVER DO THIS - Hardcoded secrets
+const apiKey = 'sk-abc123...'
+const password = 'DI3+@##AN@:rKEFi'
+Authorization: `Bearer ${process.env.PASSWORD || 'hardcoded-fallback'}`
+
+// ❌ NEVER DO THIS - Secrets in config files
+const config = {
+  apiKey: 'sk-real-key-here',
+  dbPassword: 'production-password'
+}
+```
+
+#### **Secure Patterns:**
+```typescript
+// ✅ CORRECT - Environment variables only
+const apiKey = process.env.OPENAI_API_KEY
+if (!apiKey) {
+  throw new Error('OPENAI_API_KEY environment variable is required')
+}
+
+// ✅ CORRECT - No fallback secrets
+Authorization: `Bearer ${process.env.ACCESS_PASSWORD}`
+
+// ✅ CORRECT - Validation without exposure
+if (!env.ANTHROPIC_API_KEY) {
+  throw new Error('API key not configured for provider: anthropic')
+}
+```
+
+#### **Secret Management:**
+- Use `.env` files for local development (never commit these)
+- Use secure environment variable injection in production
+- Rotate credentials regularly
+- Use principle of least privilege for API keys
+- Monitor for credential exposure in logs or responses
+
+#### **Code Review Checklist:**
+- [ ] No hardcoded secrets or credentials
+- [ ] No fallback values for sensitive data
+- [ ] Environment variables properly validated
+- [ ] Secrets not logged or returned in responses
+- [ ] API keys scoped to minimum required permissions
+
 ## Analytics & Monitoring
 
 ### 1. **Usage Analytics**
